@@ -1,0 +1,25 @@
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - goimports
+    - misspell
+    - depguard
+
+linters-settings:
+  depguard:
+    rules:
+      shared-no-io:
+        files:
+          - "**/shared/**/*.go"
+        deny:
+          - pkg: "database/sql"
+            desc: "shared/ must not import I/O packages (database/sql)"
+          - pkg: "os"
+            desc: "shared/ must not import I/O packages (os)"
+          - pkg: "io"
+            desc: "shared/ must not import I/O packages (io)"
+          - pkg: "net/http"
+            desc: "shared/ must not import I/O packages (net/http)"
