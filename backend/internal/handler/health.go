@@ -1,19 +1,24 @@
 package handler
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"net/http"
 )
 
-// HealthHandler handles the /api/health endpoint.
-type HealthHandler struct {
-	db *sql.DB // optional; may be nil in tests
+// HealthChecker abstracts health checks from concrete database implementations.
+type HealthChecker interface {
+	Ping(ctx context.Context) error
 }
 
-// NewHealthHandler creates a HealthHandler. db may be nil (health will report DBOk: false).
-func NewHealthHandler(db *sql.DB) *HealthHandler {
-	return &HealthHandler{db: db}
+// HealthHandler handles the /api/health endpoint.
+type HealthHandler struct {
+	checker HealthChecker // optional; may be nil in tests
+}
+
+// NewHealthHandler creates a HealthHandler. checker may be nil (health will report DBOk: false).
+func NewHealthHandler(checker HealthChecker) *HealthHandler {
+	return &HealthHandler{checker: checker}
 }
 
 // Register wires the health route into the given ServeMux.
@@ -24,8 +29,8 @@ func (h *HealthHandler) Register(mux *http.ServeMux) {
 // GetHealth handles GET /api/health.
 func (h *HealthHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	dbOk := false
-	if h.db != nil {
-		dbOk = h.db.PingContext(r.Context()) == nil
+	if h.checker != nil {
+		dbOk = h.checker.Ping(r.Context()) == nil
 	}
 
 	resp := map[string]any{

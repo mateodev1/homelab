@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -13,6 +14,14 @@ import (
 	// Register the modernc SQLite driver.
 	_ "modernc.org/sqlite"
 )
+
+type sqlHealthChecker struct {
+	db *sql.DB
+}
+
+func (c sqlHealthChecker) Ping(ctx context.Context) error {
+	return c.db.PingContext(ctx)
+}
 
 func main() {
 	port := envOr("PORT", "8080")
@@ -33,7 +42,7 @@ func main() {
 	svc := service.NewTodoService(s)
 
 	todoHandler := handler.NewTodoHandler(svc)
-	healthHandler := handler.NewHealthHandler(db)
+	healthHandler := handler.NewHealthHandler(sqlHealthChecker{db: db})
 
 	mux := http.NewServeMux()
 	todoHandler.Register(mux)
