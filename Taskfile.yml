@@ -1,0 +1,57 @@
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  dev:
+    desc: "Start backend and frontend in dev mode"
+    cmds:
+      - docker compose up
+
+  test:
+    desc: "Run all tests"
+    cmds:
+      - task: test:go
+      - task: test:frontend
+
+  test:go:
+    desc: "Run Go tests"
+    cmds:
+      - go test -race ./...
+
+  test:frontend:
+    desc: "Run frontend tests"
+    cmds:
+      - pnpm --dir frontend test --run
+
+  build:
+    desc: "Build all binaries"
+    cmds:
+      - go build ./backend/cmd/api
+      - go build ./cli/cmd/homelab
+
+  lint:
+    desc: "Lint all code"
+    cmds:
+      - task: lint:go
+      - task: lint:frontend
+
+  lint:go:
+    desc: "Lint Go code"
+    cmds:
+      - golangci-lint run ./...
+
+  lint:frontend:
+    desc: "Lint frontend"
+    cmds:
+      - pnpm --dir frontend run lint
+
+  migrate:
+    desc: "Run database migrations"
+    cmds:
+      - echo "No migrations yet"
+
+  docker:build:
+    desc: "Build Docker images"
+    cmds:
+      - docker compose build
