@@ -14,5 +14,11 @@ describe('App', () => {
     render(<App />);
     const placeholder = screen.getByTestId('todo-list-placeholder');
     expect(placeholder).toBeInTheDocument();
+
+    expect(placeholder).toHaveAttribute('data-testid', 'todo-list-placeholder');
+
+    const headings = screen.getAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('HomeLab');
   });
 });
