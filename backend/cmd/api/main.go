@@ -47,10 +47,11 @@ func main() {
 	mux := http.NewServeMux()
 	todoHandler.Register(mux)
 	healthHandler.Register(mux)
+	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(mux)))
 
 	addr := ":" + port
 	log.Printf("backend listening on %s (db: %s)", addr, dbPath)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, chain); err != nil {
 		log.Fatalf("ListenAndServe: %v", err)
 	}
 }
