@@ -17,8 +17,8 @@ import (
 // --- in-test mock service ---
 
 type mockTodoService struct {
-	todos  []*domain.Todo
-	err    error
+	todos []*domain.Todo
+	err   error
 }
 
 func (m *mockTodoService) CreateTodo(_ context.Context, title string, createdAt time.Time) (*domain.Todo, error) {
@@ -30,11 +30,20 @@ func (m *mockTodoService) CreateTodo(_ context.Context, title string, createdAt 
 	return t, nil
 }
 
-func (m *mockTodoService) ListTodos(_ context.Context) ([]*domain.Todo, error) {
+func (m *mockTodoService) ListTodos(_ context.Context, done *bool) ([]*domain.Todo, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return m.todos, nil
+	if done == nil {
+		return m.todos, nil
+	}
+	filtered := make([]*domain.Todo, 0, len(m.todos))
+	for _, t := range m.todos {
+		if t.Done == *done {
+			filtered = append(filtered, t)
+		}
+	}
+	return filtered, nil
 }
 
 func (m *mockTodoService) GetTodo(_ context.Context, id int64) (*domain.Todo, error) {
@@ -47,7 +56,7 @@ func (m *mockTodoService) GetTodo(_ context.Context, id int64) (*domain.Todo, er
 			return &cp, nil
 		}
 	}
-	return nil, errors.New("not found")
+	return nil, domain.ErrNotFound
 }
 
 func (m *mockTodoService) UpdateTodo(_ context.Context, id int64, title string, done bool) (*domain.Todo, error) {
@@ -62,7 +71,7 @@ func (m *mockTodoService) UpdateTodo(_ context.Context, id int64, title string, 
 			return &cp, nil
 		}
 	}
-	return nil, errors.New("not found")
+	return nil, domain.ErrNotFound
 }
 
 func (m *mockTodoService) DeleteTodo(_ context.Context, id int64) error {
@@ -75,7 +84,7 @@ func (m *mockTodoService) DeleteTodo(_ context.Context, id int64) error {
 			return nil
 		}
 	}
-	return errors.New("not found")
+	return domain.ErrNotFound
 }
 
 // Compile-time assertion: mockTodoService satisfies handler.TodoServicer.
@@ -138,6 +147,60 @@ func TestListTodos_EmptyReturnsArray(t *testing.T) {
 	}
 	if len(body) != 0 {
 		t.Errorf("expected empty array, got %d items", len(body))
+	}
+}
+
+func TestListTodos_DoneFilter_True(t *testing.T) {
+	t.Parallel()
+
+	ms := &mockTodoService{todos: []*domain.Todo{
+		{ID: 1, Title: "A", Done: true, CreatedAt: time.Now()},
+		{ID: 2, Title: "B", Done: false, CreatedAt: time.Now()},
+		{ID: 3, Title: "C", Done: true, CreatedAt: time.Now()},
+	}}
+	mux := buildMux(ms)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/todos?done=true", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	var body []map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if len(body) != 2 {
+		t.Fatalf("expected 2 todos in response, got %d", len(body))
+	}
+	for i, todo := range body {
+		if done, ok := todo["done"].(bool); !ok || !done {
+			t.Fatalf("todo[%d] expected done=true, got %v", i, todo["done"])
+		}
+	}
+}
+
+func TestListTodos_DoneFilter_InvalidParam(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/todos?done=banana", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+
+	var body map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["error"] != "invalid done param" {
+		t.Fatalf("expected invalid done param error, got %q", body["error"])
 	}
 }
 
@@ -213,12 +276,34 @@ func TestGetTodo_NotFound(t *testing.T) {
 
 	mux := buildMux(&mockTodoService{})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/todos/9999", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/todos/999", nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", rec.Code)
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+
+	var body map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["error"] != "not found" {
+		t.Fatalf("expected not found error, got %q", body["error"])
+	}
+}
+
+func TestGetTodo_DBError(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{err: errors.New("db down")})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/todos/999", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", rec.Code)
 	}
 }
 
@@ -248,6 +333,46 @@ func TestUpdateTodo_OK(t *testing.T) {
 	}
 	if resp["done"] != true {
 		t.Errorf("expected done=true, got %v", resp["done"])
+	}
+}
+
+func TestUpdateTodo_BlankTitle(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{todos: []*domain.Todo{{ID: 1, Title: "Before", Done: false, CreatedAt: time.Now()}}})
+
+	body := `{"title":"  ","done":true}`
+	req := httptest.NewRequest(http.MethodPut, "/api/todos/1", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+
+	var resp map[string]string
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["error"] != "title is required" {
+		t.Fatalf("expected title is required error, got %q", resp["error"])
+	}
+}
+
+func TestUpdateTodo_NotFound(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{})
+
+	body := `{"title":"After","done":true}`
+	req := httptest.NewRequest(http.MethodPut, "/api/todos/999", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
 	}
 }
 

@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,7 +17,7 @@ import (
 // the handler package owns the interface it needs.
 type TodoServicer interface {
 	CreateTodo(ctx context.Context, title string, createdAt time.Time) (*domain.Todo, error)
-	ListTodos(ctx context.Context) ([]*domain.Todo, error)
+	ListTodos(ctx context.Context, done *bool) ([]*domain.Todo, error)
 	GetTodo(ctx context.Context, id int64) (*domain.Todo, error)
 	UpdateTodo(ctx context.Context, id int64, title string, done bool) (*domain.Todo, error)
 	DeleteTodo(ctx context.Context, id int64) error
@@ -67,7 +67,17 @@ func (h *TodoHandler) item(w http.ResponseWriter, r *http.Request) {
 
 // ListTodos handles GET /api/todos.
 func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
-	todos, err := h.svc.ListTodos(r.Context())
+	var done *bool
+	if raw := r.URL.Query().Get("done"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			jsonError(w, "invalid done param", http.StatusBadRequest)
+			return
+		}
+		done = &parsed
+	}
+
+	todos, err := h.svc.ListTodos(r.Context(), done)
 	if err != nil {
 		jsonError(w, "failed to list todos", http.StatusInternalServerError)
 		return
@@ -114,7 +124,11 @@ func (h *TodoHandler) GetTodo(w http.ResponseWriter, r *http.Request) {
 
 	todo, err := h.svc.GetTodo(r.Context(), id)
 	if err != nil {
-		jsonError(w, fmt.Sprintf("todo %d not found", id), http.StatusNotFound)
+		if errors.Is(err, domain.ErrNotFound) {
+			jsonError(w, "not found", http.StatusNotFound)
+			return
+		}
+		jsonError(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	jsonOK(w, todoResponse(todo))
@@ -136,10 +150,18 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
+	if strings.TrimSpace(req.Title) == "" {
+		jsonError(w, "title is required", http.StatusBadRequest)
+		return
+	}
 
 	todo, err := h.svc.UpdateTodo(r.Context(), id, req.Title, req.Done)
 	if err != nil {
-		jsonError(w, fmt.Sprintf("todo %d not found", id), http.StatusNotFound)
+		if errors.Is(err, domain.ErrNotFound) {
+			jsonError(w, "not found", http.StatusNotFound)
+			return
+		}
+		jsonError(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	jsonOK(w, todoResponse(todo))
@@ -154,7 +176,11 @@ func (h *TodoHandler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.DeleteTodo(r.Context(), id); err != nil {
-		jsonError(w, fmt.Sprintf("todo %d not found", id), http.StatusNotFound)
+		if errors.Is(err, domain.ErrNotFound) {
+			jsonError(w, "not found", http.StatusNotFound)
+			return
+		}
+		jsonError(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
