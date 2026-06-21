@@ -1,9 +1,4 @@
-import {
-  ApiError,
-  type CreateTodoPayload,
-  type Todo,
-  type UpdateTodoPayload,
-} from '../types/todo';
+import { ApiError, type CreateTodoPayload, type Todo, type UpdateTodoPayload } from '../types/todo';
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -14,9 +9,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export async function getTodos(signal?: AbortSignal): Promise<Todo[]> {
-  const response = signal
-    ? await fetch('/api/todos', { signal })
-    : await fetch('/api/todos');
+  const response = signal ? await fetch('/api/todos', { signal }) : await fetch('/api/todos');
   return parseResponse<Todo[]>(response);
 }
 
@@ -35,10 +28,7 @@ export async function getTodoById(id: number): Promise<Todo> {
   return parseResponse<Todo>(response);
 }
 
-export async function updateTodo(
-  id: number,
-  payload: UpdateTodoPayload,
-): Promise<Todo> {
+export async function updateTodo(id: number, payload: UpdateTodoPayload): Promise<Todo> {
   const response = await fetch(`/api/todos/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

@@ -9,13 +9,7 @@ interface TodoListProps {
   onDelete: (id: number) => void;
 }
 
-export function TodoList({
-  todos,
-  loading,
-  error,
-  onToggle,
-  onDelete,
-}: TodoListProps) {
+export function TodoList({ todos, loading, error, onToggle, onDelete }: TodoListProps) {
   if (loading) {
     return <p>Loading...</p>;
   }
@@ -31,12 +25,7 @@ export function TodoList({
   return (
     <ul>
       {todos.map((todo) => (
-        <TodoItem
-          key={todo.id}
-          todo={todo}
-          onToggle={onToggle}
-          onDelete={onDelete}
-        />
+        <TodoItem key={todo.id} todo={todo} onToggle={onToggle} onDelete={onDelete} />
       ))}
     </ul>
   );

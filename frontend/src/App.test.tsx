@@ -1,24 +1,54 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import App from './App';
+import { useTodos } from './hooks/useTodos';
+
+vi.mock('./hooks/useTodos', () => ({
+  useTodos: vi.fn(),
+}));
+
+const mockedUseTodos = vi.mocked(useTodos);
 
 describe('App', () => {
-  it('renders without crashing and shows HomeLab heading', () => {
+  it('renders TodoForm and TodoList using useTodos state', () => {
+    mockedUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 1,
+          title: 'From hook',
+          done: false,
+          created_at: '2026-06-21T03:00:00Z',
+          updated_at: '2026-06-21T03:00:00Z',
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: vi.fn(),
+      toggleTodo: vi.fn(),
+      removeTodo: vi.fn(),
+    });
+
     render(<App />);
-    const heading = screen.getByRole('heading', { name: /homelab/i });
+
+    const heading = screen.getByRole('heading', { name: /todo app/i });
     expect(heading).toBeInTheDocument();
-    expect(heading.tagName).toBe('H1');
+    expect(screen.getByRole('textbox', { name: /todo title/i })).toBeInTheDocument();
+    expect(screen.getByText('From hook')).toBeInTheDocument();
   });
 
-  it('renders the TodoList placeholder section', () => {
+  it('renders without crashing when loading state is true', () => {
+    mockedUseTodos.mockReturnValue({
+      todos: [],
+      loading: true,
+      error: null,
+      addTodo: vi.fn(),
+      toggleTodo: vi.fn(),
+      removeTodo: vi.fn(),
+    });
+
     render(<App />);
-    const placeholder = screen.getByTestId('todo-list-placeholder');
-    expect(placeholder).toBeInTheDocument();
 
-    expect(placeholder).toHaveAttribute('data-testid', 'todo-list-placeholder');
-
-    const headings = screen.getAllByRole('heading', { level: 1 });
-    expect(headings).toHaveLength(1);
-    expect(headings[0]).toHaveTextContent('HomeLab');
+    expect(screen.getByRole('heading', { name: /todo app/i })).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 });

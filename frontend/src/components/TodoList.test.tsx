@@ -22,28 +22,14 @@ describe('TodoList', () => {
   ];
 
   it('shows loading state', () => {
-    render(
-      <TodoList
-        todos={[]}
-        loading
-        error={null}
-        onToggle={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+    render(<TodoList todos={[]} loading error={null} onToggle={vi.fn()} onDelete={vi.fn()} />);
 
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
   it('shows error state', () => {
     render(
-      <TodoList
-        todos={[]}
-        loading={false}
-        error="Failed"
-        onToggle={vi.fn()}
-        onDelete={vi.fn()}
-      />,
+      <TodoList todos={[]} loading={false} error="Failed" onToggle={vi.fn()} onDelete={vi.fn()} />,
     );
 
     expect(screen.getByText('Error: Failed')).toBeInTheDocument();
@@ -51,13 +37,7 @@ describe('TodoList', () => {
 
   it('shows empty state when there are no todos', () => {
     render(
-      <TodoList
-        todos={[]}
-        loading={false}
-        error={null}
-        onToggle={vi.fn()}
-        onDelete={vi.fn()}
-      />,
+      <TodoList todos={[]} loading={false} error={null} onToggle={vi.fn()} onDelete={vi.fn()} />,
     );
 
     expect(screen.getByText('No todos yet.')).toBeInTheDocument();
@@ -65,13 +45,7 @@ describe('TodoList', () => {
 
   it('renders todo items when todos exist', () => {
     render(
-      <TodoList
-        todos={todos}
-        loading={false}
-        error={null}
-        onToggle={vi.fn()}
-        onDelete={vi.fn()}
-      />,
+      <TodoList todos={todos} loading={false} error={null} onToggle={vi.fn()} onDelete={vi.fn()} />,
     );
 
     expect(screen.getByText('First')).toBeInTheDocument();

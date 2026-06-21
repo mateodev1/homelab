@@ -10,12 +10,7 @@ vi.mock('../api/todos', () => ({
   deleteTodo: vi.fn(),
 }));
 
-import {
-  createTodo,
-  deleteTodo,
-  getTodos,
-  updateTodo,
-} from '../api/todos';
+import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
 
 const mockedGetTodos = vi.mocked(getTodos);
 const mockedCreateTodo = vi.mocked(createTodo);

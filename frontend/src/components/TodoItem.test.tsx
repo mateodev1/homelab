@@ -13,9 +13,7 @@ describe('TodoItem', () => {
   };
 
   it('renders title and checkbox state', () => {
-    render(
-      <TodoItem todo={todo} onToggle={vi.fn()} onDelete={vi.fn()} />,
-    );
+    render(<TodoItem todo={todo} onToggle={vi.fn()} onDelete={vi.fn()} />);
 
     expect(screen.getByText('Write TodoItem tests')).toBeInTheDocument();
     expect(screen.getByRole('checkbox')).not.toBeChecked();
@@ -42,13 +40,7 @@ describe('TodoItem', () => {
   });
 
   it('applies line-through text style when todo is done', () => {
-    render(
-      <TodoItem
-        todo={{ ...todo, done: true }}
-        onToggle={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+    render(<TodoItem todo={{ ...todo, done: true }} onToggle={vi.fn()} onDelete={vi.fn()} />);
 
     expect(screen.getByText('Write TodoItem tests')).toHaveStyle({
       textDecoration: 'line-through',

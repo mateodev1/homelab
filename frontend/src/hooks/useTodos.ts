@@ -67,9 +67,7 @@ export function useTodos(): UseTodosReturn {
     try {
       setError(null);
       const updated = await updateTodo(id, { done: !currentTodo.done });
-      setTodos((current) =>
-        current.map((todo) => (todo.id === id ? updated : todo)),
-      );
+      setTodos((current) => current.map((todo) => (todo.id === id ? updated : todo)));
     } catch (err) {
       setError(toMessage(err));
     }

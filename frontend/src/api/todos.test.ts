@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, type Todo } from '../types/todo';
-import {
-  createTodo,
-  deleteTodo,
-  getTodoById,
-  getTodos,
-  updateTodo,
-} from './todos';
+import { createTodo, deleteTodo, getTodoById, getTodos, updateTodo } from './todos';
 
 const mockFetch = vi.fn();
 
@@ -79,9 +73,7 @@ describe('todos API client', () => {
       text: vi.fn().mockResolvedValueOnce('invalid payload'),
     });
 
-    await expect(createTodo({ title: '' })).rejects.toEqual(
-      new ApiError(400, 'invalid payload'),
-    );
+    await expect(createTodo({ title: '' })).rejects.toEqual(new ApiError(400, 'invalid payload'));
   });
 
   it('getTodoById returns todo on success', async () => {
@@ -141,9 +133,7 @@ describe('todos API client', () => {
       text: vi.fn().mockResolvedValueOnce('conflict'),
     });
 
-    await expect(updateTodo(4, { done: true })).rejects.toEqual(
-      new ApiError(409, 'conflict'),
-    );
+    await expect(updateTodo(4, { done: true })).rejects.toEqual(new ApiError(409, 'conflict'));
   });
 
   it('deleteTodo returns void for 204 and does not parse json', async () => {
