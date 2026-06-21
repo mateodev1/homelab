@@ -2,6 +2,8 @@ package domain_test
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -68,25 +70,37 @@ func TestTodoFieldAssignment(t *testing.T) {
 	}
 }
 
-// TestHealthStatusFields verifies HealthStatus fields exist and have correct zero values.
-func TestHealthStatusFields(t *testing.T) {
+func TestErrNotFound(t *testing.T) {
 	t.Parallel()
 
-	var hs domain.HealthStatus
+	if domain.ErrNotFound == nil {
+		t.Fatal("expected ErrNotFound to be non-nil")
+	}
+	if !strings.Contains(domain.ErrNotFound.Error(), "not found") {
+		t.Errorf("expected ErrNotFound message to contain %q, got %q", "not found", domain.ErrNotFound.Error())
+	}
+}
 
-	if hs.Status != "" {
-		t.Errorf("expected Status zero value \"\", got %q", hs.Status)
-	}
-	if hs.DBOk != false {
-		t.Error("expected DBOk zero value false, got true")
-	}
+func TestHealthStatus(t *testing.T) {
+	t.Parallel()
 
-	// Triangulation: set non-zero values.
-	hs2 := domain.HealthStatus{Status: "ok", DBOk: true}
-	if hs2.Status != "ok" {
-		t.Errorf("expected Status \"ok\", got %q", hs2.Status)
+	hs := domain.HealthStatus{Status: "ok", DBOk: true}
+	if hs.Status != "ok" {
+		t.Errorf("expected Status %q, got %q", "ok", hs.Status)
 	}
-	if !hs2.DBOk {
+	if !hs.DBOk {
 		t.Error("expected DBOk true, got false")
+	}
+
+	b, err := json.Marshal(hs)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	jsonOut := string(b)
+	if !strings.Contains(jsonOut, `"status":"ok"`) {
+		t.Errorf("expected marshaled JSON to contain %q, got %q", `"status":"ok"`, jsonOut)
+	}
+	if !strings.Contains(jsonOut, `"db_ok":true`) {
+		t.Errorf("expected marshaled JSON to contain %q, got %q", `"db_ok":true`, jsonOut)
 	}
 }

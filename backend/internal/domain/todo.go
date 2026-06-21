@@ -2,8 +2,11 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var ErrNotFound = errors.New("not found")
 
 // Todo represents a single to-do item.
 type Todo struct {
@@ -11,6 +14,11 @@ type Todo struct {
 	Title     string
 	Done      bool
 	CreatedAt time.Time
+}
+
+type HealthStatus struct {
+	Status string `json:"status"`
+	DBOk   bool   `json:"db_ok"`
 }
 
 // TodoStore defines the persistence contract for Todo entities.
