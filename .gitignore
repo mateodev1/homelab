@@ -1,0 +1,30 @@
+# Go
+bin/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Node
+node_modules/
+dist/
+.pnpm-store/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Data dir — keep the gitkeep marker only
+data/*.db
+
+# Env files
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
