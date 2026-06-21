@@ -32,11 +32,20 @@ func (s *TodoService) CreateTodo(ctx context.Context, title string, createdAt ti
 	return todo, nil
 }
 
-// ListTodos returns all stored Todos.
-func (s *TodoService) ListTodos(ctx context.Context) ([]*domain.Todo, error) {
+// ListTodos returns stored Todos, optionally filtered by done status.
+func (s *TodoService) ListTodos(ctx context.Context, done *bool) ([]*domain.Todo, error) {
 	todos, err := s.store.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("service.ListTodos: %w", err)
+	}
+	if done != nil {
+		filtered := make([]*domain.Todo, 0, len(todos))
+		for _, t := range todos {
+			if t.Done == *done {
+				filtered = append(filtered, t)
+			}
+		}
+		return filtered, nil
 	}
 	return todos, nil
 }

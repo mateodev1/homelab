@@ -83,6 +83,8 @@ func (m *mockStore) Delete(_ context.Context, id int64) error {
 // Compile-time assertion: mockStore satisfies domain.TodoStore.
 var _ domain.TodoStore = (*mockStore)(nil)
 
+func boolPtr(b bool) *bool { return &b }
+
 // --- tests ---
 
 func TestCreateTodo_AssignsID(t *testing.T) {
@@ -117,7 +119,7 @@ func TestCreateTodo_PropagatesStoreError(t *testing.T) {
 	}
 }
 
-func TestListTodos_ReturnsAll(t *testing.T) {
+func TestListTodos(t *testing.T) {
 	t.Parallel()
 
 	ms := newMockStore()
@@ -130,12 +132,32 @@ func TestListTodos_ReturnsAll(t *testing.T) {
 		}
 	}
 
-	todos, err := svc.ListTodos(ctx)
+	if _, err := svc.UpdateTodo(ctx, 1, "A", true); err != nil {
+		t.Fatalf("UpdateTodo A done=true: %v", err)
+	}
+
+	todos, err := svc.ListTodos(ctx, nil)
 	if err != nil {
-		t.Fatalf("ListTodos: %v", err)
+		t.Fatalf("ListTodos(nil): %v", err)
 	}
 	if len(todos) != 3 {
 		t.Errorf("expected 3 todos, got %d", len(todos))
+	}
+
+	doneTodos, err := svc.ListTodos(ctx, boolPtr(true))
+	if err != nil {
+		t.Fatalf("ListTodos(true): %v", err)
+	}
+	if len(doneTodos) != 1 {
+		t.Errorf("expected 1 done todo, got %d", len(doneTodos))
+	}
+
+	notDoneTodos, err := svc.ListTodos(ctx, boolPtr(false))
+	if err != nil {
+		t.Fatalf("ListTodos(false): %v", err)
+	}
+	if len(notDoneTodos) != 2 {
+		t.Errorf("expected 2 not-done todos, got %d", len(notDoneTodos))
 	}
 }
 
@@ -144,7 +166,7 @@ func TestListTodos_EmptyStore(t *testing.T) {
 
 	svc := service.NewTodoService(newMockStore())
 
-	todos, err := svc.ListTodos(context.Background())
+	todos, err := svc.ListTodos(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("ListTodos on empty store: %v", err)
 	}
