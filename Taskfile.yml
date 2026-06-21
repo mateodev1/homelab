@@ -18,11 +18,13 @@ tasks:
     desc: "Run Go tests"
     cmds:
       - go test -race ./...
+      - golangci-lint run ./...
 
   test:frontend:
     desc: "Run frontend tests"
     cmds:
       - pnpm --dir frontend test --run
+      - pnpm --dir frontend run lint
 
   build:
     desc: "Build all binaries"
