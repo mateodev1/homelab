@@ -13,8 +13,10 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getTodos(): Promise<Todo[]> {
-  const response = await fetch('/api/todos');
+export async function getTodos(signal?: AbortSignal): Promise<Todo[]> {
+  const response = signal
+    ? await fetch('/api/todos', { signal })
+    : await fetch('/api/todos');
   return parseResponse<Todo[]>(response);
 }
 
