@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -76,6 +77,9 @@ func (s *SQLiteStore) GetByID(ctx context.Context, id int64) (*domain.Todo, erro
 	row := s.db.QueryRowContext(ctx, q, id)
 	todo, err := scanTodoRow(row)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("get todo: %w", domain.ErrNotFound)
+		}
 		return nil, fmt.Errorf("store.GetByID(%d): %w", id, err)
 	}
 	return todo, nil
@@ -95,7 +99,7 @@ func (s *SQLiteStore) Update(ctx context.Context, todo *domain.Todo) error {
 		return fmt.Errorf("store.Update RowsAffected: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("store.Update: id %d not found", todo.ID)
+		return fmt.Errorf("update todo: %w", domain.ErrNotFound)
 	}
 	return nil
 }
@@ -114,7 +118,7 @@ func (s *SQLiteStore) Delete(ctx context.Context, id int64) error {
 		return fmt.Errorf("store.Delete RowsAffected: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("store.Delete: id %d not found", id)
+		return fmt.Errorf("delete todo: %w", domain.ErrNotFound)
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 	"time"
 
@@ -141,7 +142,7 @@ func TestGetByID_Found(t *testing.T) {
 	}
 }
 
-// TestGetByID_NotFound verifies that retrieving a missing ID returns an error.
+// TestGetByID_NotFound verifies missing ID maps to domain.ErrNotFound.
 func TestGetByID_NotFound(t *testing.T) {
 	t.Parallel()
 
@@ -149,9 +150,22 @@ func TestGetByID_NotFound(t *testing.T) {
 	s := store.New(db)
 	ctx := context.Background()
 
-	_, err := s.GetByID(ctx, 9999)
-	if err == nil {
-		t.Error("expected error for missing ID, got nil")
+	_, err := s.GetByID(ctx, 99999)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("expected errors.Is(err, domain.ErrNotFound)=true, got err=%v", err)
+	}
+}
+
+func TestUpdate_NotFound(t *testing.T) {
+	t.Parallel()
+
+	db := openTestDB(t)
+	s := store.New(db)
+	ctx := context.Background()
+
+	err := s.Update(ctx, &domain.Todo{ID: 99999, Title: "x"})
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("expected errors.Is(err, domain.ErrNotFound)=true, got err=%v", err)
 	}
 }
 
@@ -206,5 +220,18 @@ func TestDelete_Removes(t *testing.T) {
 	_, err := s.GetByID(ctx, todo.ID)
 	if err == nil {
 		t.Error("expected error after Delete, got nil")
+	}
+}
+
+func TestDelete_NotFound(t *testing.T) {
+	t.Parallel()
+
+	db := openTestDB(t)
+	s := store.New(db)
+	ctx := context.Background()
+
+	err := s.Delete(ctx, 99999)
+	if !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("expected errors.Is(err, domain.ErrNotFound)=true, got err=%v", err)
 	}
 }
