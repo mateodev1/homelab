@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Stage: base — download dependencies
 # ---------------------------------------------------------------------------
-FROM golang:1.23-alpine AS base
+FROM golang:1.25-alpine AS base
 
 WORKDIR /app
 
@@ -11,6 +11,8 @@ COPY go.work go.work.sum ./
 COPY backend/go.mod backend/go.sum ./backend/
 COPY cli/go.mod ./cli/
 COPY shared/go.mod ./shared/
+# cli and shared have no external deps — create empty go.sum so go.work resolves
+RUN touch cli/go.sum shared/go.sum
 
 RUN go mod download
 
