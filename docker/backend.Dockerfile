@@ -34,7 +34,7 @@ FROM base AS build
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux go build -o /app/bin/api ./backend/cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/api ./backend/cmd/api
 
 # ---------------------------------------------------------------------------
 # Stage: prod — minimal runtime image
