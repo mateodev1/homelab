@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -230,7 +231,11 @@ func mustJSONRequest(t *testing.T, method, url string, payload map[string]any) *
 
 func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Response {
 	t.Helper()
-	req, err := http.NewRequest(method, url, body)
+	var reqBody io.Reader
+	if body != nil {
+		reqBody = body
+	}
+	req, err := http.NewRequest(method, url, reqBody)
 	if err != nil {
 		t.Fatalf("new request: %v", err)
 	}
