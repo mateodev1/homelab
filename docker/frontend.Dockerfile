@@ -38,11 +38,7 @@ RUN pnpm build
 # ---------------------------------------------------------------------------
 FROM nginx:alpine AS prod
 
-RUN adduser -D -u 1000 appuser
-
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-
-USER appuser
 
 EXPOSE 80

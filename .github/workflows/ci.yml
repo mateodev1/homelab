@@ -20,7 +20,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61.0
-          working-directory: .
+          working-directory: backend
 
   test-go:
     name: Test Go
