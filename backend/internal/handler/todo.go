@@ -82,11 +82,12 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "failed to list todos", http.StatusInternalServerError)
 		return
 	}
-	// Ensure we encode [] not null for an empty slice.
-	if todos == nil {
-		todos = []*domain.Todo{}
+	// Map through todoResponse so field names match the wire format.
+	out := make([]map[string]any, len(todos))
+	for i, t := range todos {
+		out[i] = todoResponse(t)
 	}
-	jsonOK(w, todos)
+	jsonOK(w, out)
 }
 
 // CreateTodo handles POST /api/todos.
