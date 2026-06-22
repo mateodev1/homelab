@@ -78,33 +78,19 @@ jobs:
 
   deploy:
     name: Deploy to homelab
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-and-push-backend, build-and-push-frontend]
     environment: homelab
     steps:
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v3
-        with:
-          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-          tags: tag:ci
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+      - name: Deploy
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GHCR_USER: ${{ github.repository_owner }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          insecure_ignore_host_key: true
-          envs: GHCR_TOKEN,GHCR_USER
-          script: |
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            cd ~/homelab
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
-            docker logout ghcr.io
-            echo "Deploy done: $(date)"
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          cd ~/homelab
+          docker compose pull
+          docker compose up -d
+          docker image prune -f
+          docker logout ghcr.io
+          echo "Deploy done: $(date)"
