@@ -13,12 +13,12 @@ import (
 // mockStore is an in-test implementation used solely to prove the interface compiles.
 type mockStore struct{}
 
-func (m *mockStore) Create(_ context.Context, _ *domain.Todo) error   { return nil }
-func (m *mockStore) GetAll(_ context.Context) ([]*domain.Todo, error)  { return nil, nil }
+func (m *mockStore) Create(_ context.Context, _ *domain.Todo) error { return nil }
+func (m *mockStore) GetAll(_ context.Context) ([]*domain.Todo, error) { return nil, nil }
 func (m *mockStore) GetByID(_ context.Context, _ int64) (*domain.Todo, error) {
 	return nil, nil
 }
-func (m *mockStore) Update(_ context.Context, _ *domain.Todo) error   { return nil }
+func (m *mockStore) Update(_ context.Context, _ *domain.Todo) error { return nil }
 func (m *mockStore) Delete(_ context.Context, _ int64) error           { return nil }
 
 // Compile-time assertion: mockStore satisfies domain.TodoStore.
