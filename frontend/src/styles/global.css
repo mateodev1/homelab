@@ -1,4 +1,35 @@
-/* ===== Reset & Base ===== */
+/* ===== 1. Theme tokens    ===== */
+:root {
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f3f4;
+  --color-border: #e0e0e0;
+  --color-text-primary: #202124;
+  --color-text-muted: #5f6368;
+  --color-text-subtle: #80868b;
+  --color-accent: #1a73e8;
+  --color-error: #d93025;
+  --color-spinner-track: #e0e0e0;
+  --color-hover-overlay: rgba(0, 0, 0, 0.06);
+  --color-hover-icon: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] {
+  --color-bg: #202124;
+  --color-surface: #2d2e30;
+  --color-surface-alt: #303134;
+  --color-border: #5f6368;
+  --color-text-primary: #e8eaed;
+  --color-text-muted: #9aa0a6;
+  --color-text-subtle: #9aa0a6;
+  --color-accent: #8ab4f8;
+  --color-error: #f28b82;
+  --color-spinner-track: #5f6368;
+  --color-hover-overlay: rgba(255, 255, 255, 0.06);
+  --color-hover-icon: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== 2. Reset & Base    ===== */
 *,
 *::before,
 *::after {
@@ -9,8 +40,8 @@
 
 body {
   font-family: "Google Sans", Roboto, Arial, sans-serif;
-  background-color: #f8f9fa;
-  color: #202124;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
   min-height: 100vh;
 }
 
@@ -29,14 +60,21 @@ input {
   resize: none;
 }
 
-/* ===== App Layout ===== */
+/* ===== 3. App Layout      ===== */
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-/* ===== Header ===== */
+.app-main {
+  padding: 24px 16px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ===== 4. Header          ===== */
 .app-header {
   position: sticky;
   top: 0;
@@ -45,8 +83,8 @@ input {
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   height: 64px;
 }
 
@@ -64,7 +102,7 @@ input {
 .app-header__logo-text {
   font-size: 22px;
   font-weight: 400;
-  color: #5f6368;
+  color: var(--color-text-muted);
   letter-spacing: -0.5px;
 }
 
@@ -74,32 +112,32 @@ input {
   position: relative;
   display: flex;
   align-items: center;
-  background: #f1f3f4;
+  background: var(--color-surface-alt);
   border-radius: 24px;
   padding: 8px 16px;
   transition: background 0.2s, box-shadow 0.2s;
 }
 
 .app-header__search:focus-within {
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .app-header__search-icon {
   font-size: 18px;
   margin-right: 12px;
-  color: #5f6368;
+  color: var(--color-text-muted);
 }
 
 .app-header__search-input {
   flex: 1;
   background: transparent;
   font-size: 16px;
-  color: #202124;
+  color: var(--color-text-primary);
 }
 
 .app-header__search-input::placeholder {
-  color: #5f6368;
+  color: var(--color-text-muted);
 }
 
 .app-header__search-input::-webkit-search-cancel-button {
@@ -107,7 +145,7 @@ input {
 }
 
 .app-header__search-clear {
-  color: #5f6368;
+  color: var(--color-text-muted);
   font-size: 16px;
   padding: 2px 4px;
   border-radius: 50%;
@@ -115,18 +153,22 @@ input {
 }
 
 .app-header__search-clear:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--color-hover-overlay);
 }
 
-/* ===== Main ===== */
-.app-main {
-  padding: 24px 16px 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
+.app-header__theme-toggle {
+  font-size: 20px;
+  padding: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.15s;
 }
 
-/* ===== NoteForm ===== */
+.app-header__theme-toggle:hover {
+  background: var(--color-hover-icon);
+}
+
+/* ===== 5. NoteForm        ===== */
 .note-form {
   max-width: 600px;
   margin: 0 auto 32px;
@@ -145,13 +187,13 @@ input {
   padding: 12px 16px 8px;
   font-size: 15px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-text-primary);
   background: transparent;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--color-hover-icon);
 }
 
 .note-form__title::placeholder {
-  color: #80868b;
+  color: var(--color-text-subtle);
 }
 
 .note-form__body-row {
@@ -163,21 +205,21 @@ input {
   text-align: left;
   padding: 4px 0;
   font-size: 15px;
-  color: #80868b;
+  color: var(--color-text-subtle);
   background: transparent;
 }
 
 .note-form__body {
   width: 100%;
   font-size: 14px;
-  color: #202124;
+  color: var(--color-text-primary);
   background: transparent;
   min-height: 60px;
   line-height: 1.5;
 }
 
 .note-form__body::placeholder {
-  color: #80868b;
+  color: var(--color-text-subtle);
 }
 
 .note-form__footer {
@@ -195,12 +237,12 @@ input {
   font-size: 18px;
   padding: 6px;
   border-radius: 50%;
-  color: #5f6368;
+  color: var(--color-text-muted);
   transition: background 0.15s;
 }
 
 .note-form__icon-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--color-hover-overlay);
 }
 
 .note-form__close-btn {
@@ -208,15 +250,15 @@ input {
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
-  color: #444;
+  color: var(--color-text-primary);
   transition: background 0.15s;
 }
 
 .note-form__close-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--color-hover-overlay);
 }
 
-/* ===== Color Picker ===== */
+/* ===== 6. Color Picker    ===== */
 .color-picker-popup {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -226,7 +268,7 @@ input {
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px;
-  background: #fff;
+  background: var(--color-surface);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   width: 200px;
@@ -246,11 +288,11 @@ input {
 }
 
 .color-swatch--active {
-  border-color: #1a73e8;
+  border-color: var(--color-accent);
   transform: scale(1.1);
 }
 
-/* ===== NoteGrid ===== */
+/* ===== 7. NoteGrid        ===== */
 .note-grid {
   padding-top: 8px;
 }
@@ -263,7 +305,7 @@ input {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.8px;
-  color: #5f6368;
+  color: var(--color-text-muted);
   margin-bottom: 10px;
   padding-left: 4px;
 }
@@ -298,7 +340,7 @@ input {
 }
 
 .note-grid__status--error {
-  color: #d93025;
+  color: var(--color-error);
 }
 
 .note-grid__empty {
@@ -308,7 +350,7 @@ input {
   justify-content: center;
   padding: 80px 16px;
   gap: 16px;
-  color: #5f6368;
+  color: var(--color-text-muted);
 }
 
 .note-grid__empty-icon {
@@ -320,30 +362,14 @@ input {
   font-size: 16px;
 }
 
-/* ===== Spinner ===== */
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #1a73e8;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* ===== NoteCard ===== */
+/* ===== 8. NoteCard        ===== */
 .note-card {
   break-inside: avoid;
   display: inline-block;
   width: 100%;
   margin-bottom: 16px;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.2s;
   position: relative;
@@ -377,12 +403,12 @@ input {
   font-size: 16px;
   padding: 4px;
   border-radius: 50%;
-  color: #5f6368;
+  color: var(--color-text-muted);
   transition: background 0.15s, transform 0.15s;
 }
 
 .note-card__pin:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--color-hover-icon);
 }
 
 .note-card__pin--active {
@@ -390,12 +416,11 @@ input {
   filter: none;
 }
 
-/* Title */
 .note-card__title {
   padding: 12px 36px 4px 16px;
   font-size: 15px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-text-primary);
   cursor: text;
   word-break: break-word;
   min-height: 24px;
@@ -406,16 +431,15 @@ input {
   padding: 12px 36px 4px 16px;
   font-size: 15px;
   font-weight: 500;
-  color: #202124;
+  color: var(--color-text-primary);
   background: transparent;
   word-break: break-word;
 }
 
-/* Body */
 .note-card__body {
   padding: 4px 16px 8px;
   font-size: 14px;
-  color: #202124;
+  color: var(--color-text-primary);
   cursor: text;
   word-break: break-word;
   line-height: 1.5;
@@ -423,7 +447,7 @@ input {
 }
 
 .note-card__body--empty {
-  color: #80868b;
+  color: var(--color-text-subtle);
   font-style: italic;
 }
 
@@ -431,13 +455,12 @@ input {
   width: 100%;
   padding: 4px 16px 8px;
   font-size: 14px;
-  color: #202124;
+  color: var(--color-text-primary);
   background: transparent;
   line-height: 1.5;
   min-height: 60px;
 }
 
-/* Footer */
 .note-card__footer {
   padding: 4px 8px 6px;
   opacity: 0;
@@ -458,16 +481,16 @@ input {
   font-size: 16px;
   padding: 6px;
   border-radius: 50%;
-  color: #5f6368;
+  color: var(--color-text-muted);
   transition: background 0.15s;
 }
 
 .note-card__check:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--color-hover-icon);
 }
 
 .note-card__check--done {
-  color: #1a73e8;
+  color: var(--color-accent);
 }
 
 .note-card__color-picker-wrapper {
@@ -478,24 +501,40 @@ input {
   font-size: 16px;
   padding: 6px;
   border-radius: 50%;
-  color: #5f6368;
+  color: var(--color-text-muted);
   transition: background 0.15s;
 }
 
 .note-card__color-btn:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--color-hover-icon);
 }
 
 .note-card__delete {
   font-size: 16px;
   padding: 6px;
   border-radius: 50%;
-  color: #5f6368;
+  color: var(--color-text-muted);
   margin-left: auto;
   transition: background 0.15s;
 }
 
 .note-card__delete:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #d93025;
+  background: var(--color-hover-icon);
+  color: var(--color-error);
+}
+
+/* ===== 9. Spinner         ===== */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-spinner-track);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

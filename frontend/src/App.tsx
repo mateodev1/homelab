@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { NoteForm } from './components/NoteForm';
 import { NoteGrid } from './components/NoteGrid';
+import { useTheme } from './context/ThemeContext';
 import { useTodos } from './hooks/useTodos';
 
 function App() {
   const { todos, loading, error, addTodo, editTodo, removeTodo, togglePin } = useTodos();
   const [query, setQuery] = useState('');
+  const { theme, toggle } = useTheme();
 
   const filtered = query.trim()
     ? todos.filter(
@@ -43,6 +45,14 @@ function App() {
             </button>
           )}
         </div>
+        <button
+          type="button"
+          className="app-header__theme-toggle"
+          onClick={toggle}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </header>
 
       <main className="app-main">
