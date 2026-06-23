@@ -18,6 +18,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@testing-library/jest-dom": "^6.6.3",

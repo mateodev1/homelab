@@ -5,7 +5,10 @@ interface NoteGridProps {
   todos: Todo[];
   loading: boolean;
   error: string | null;
-  onEdit: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>) => Promise<void>;
+  onEdit: (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>,
+  ) => Promise<void>;
   onDelete: (id: number) => void;
   onTogglePin: (id: number) => void;
 }

@@ -129,11 +129,7 @@ export function NoteForm({ onAdd }: NoteFormProps) {
             )}
           </div>
 
-          <button
-            type="button"
-            className="note-form__close-btn"
-            onClick={commit}
-          >
+          <button type="button" className="note-form__close-btn" onClick={commit}>
             Cerrar
           </button>
         </div>

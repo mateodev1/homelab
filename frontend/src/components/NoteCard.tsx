@@ -4,7 +4,10 @@ import { COLOR_MAP } from './colors';
 
 interface NoteCardProps {
   todo: Todo;
-  onEdit: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>) => Promise<void>;
+  onEdit: (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>,
+  ) => Promise<void>;
   onDelete: (id: number) => void;
   onTogglePin: (id: number) => void;
 }
@@ -100,16 +103,14 @@ export function NoteCard({ todo, onEdit, onDelete, onTogglePin }: NoteCardProps)
           style={{ backgroundColor: bg }}
         />
       ) : (
-        <p
+        <button
+          type="button"
           className="note-card__title"
           onClick={() => setEditingTitle(true)}
-          onKeyDown={(e) => e.key === 'Enter' && setEditingTitle(true)}
-          role="button"
-          tabIndex={0}
           aria-label="Editar título"
         >
           {todo.title}
-        </p>
+        </button>
       )}
 
       {editingBody ? (
@@ -129,16 +130,14 @@ export function NoteCard({ todo, onEdit, onDelete, onTogglePin }: NoteCardProps)
           style={{ backgroundColor: bg }}
         />
       ) : (
-        <p
+        <button
+          type="button"
           className={`note-card__body${!todo.body ? ' note-card__body--empty' : ''}`}
           onClick={() => setEditingBody(true)}
-          onKeyDown={(e) => e.key === 'Enter' && setEditingBody(true)}
-          role="button"
-          tabIndex={0}
           aria-label="Editar descripción"
         >
           {todo.body || 'Agregar nota...'}
-        </p>
+        </button>
       )}
 
       <div className="note-card__footer">
