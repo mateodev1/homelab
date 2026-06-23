@@ -61,7 +61,7 @@ func TestIntegration_CRUDCycle(t *testing.T) {
 	id := int64(created["id"].(float64))
 
 	resGet := mustRequest(t, http.MethodGet, fmt.Sprintf("%s/api/todos/%d", srv.URL, id), nil)
-	defer resGet.Body.Close()
+	defer func() { _ = resGet.Body.Close() }()
 	if resGet.StatusCode != http.StatusOK {
 		t.Fatalf("expected GET 200, got %d", resGet.StatusCode)
 	}
@@ -70,19 +70,19 @@ func TestIntegration_CRUDCycle(t *testing.T) {
 		"title": "first updated",
 		"done":  true,
 	})
-	defer resUpdate.Body.Close()
+	defer func() { _ = resUpdate.Body.Close() }()
 	if resUpdate.StatusCode != http.StatusOK {
 		t.Fatalf("expected PUT 200, got %d", resUpdate.StatusCode)
 	}
 
 	resDelete := mustRequest(t, http.MethodDelete, fmt.Sprintf("%s/api/todos/%d", srv.URL, id), nil)
-	defer resDelete.Body.Close()
+	defer func() { _ = resDelete.Body.Close() }()
 	if resDelete.StatusCode != http.StatusNoContent {
 		t.Fatalf("expected DELETE 204, got %d", resDelete.StatusCode)
 	}
 
 	resNotFound := mustRequest(t, http.MethodGet, fmt.Sprintf("%s/api/todos/%d", srv.URL, id), nil)
-	defer resNotFound.Body.Close()
+	defer func() { _ = resNotFound.Body.Close() }()
 	if resNotFound.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected GET after delete 404, got %d", resNotFound.StatusCode)
 	}
@@ -93,7 +93,7 @@ func TestIntegration_GetNotFound(t *testing.T) {
 	defer cleanup()
 
 	res := mustRequest(t, http.MethodGet, srv.URL+"/api/todos/999", nil)
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", res.StatusCode)
@@ -120,7 +120,7 @@ func TestIntegration_DoneFilter(t *testing.T) {
 	mustJSONStatus(t, http.MethodPut, fmt.Sprintf("%s/api/todos/%d", srv.URL, int64(b["id"].(float64))), map[string]any{"title": "b", "done": true}, http.StatusOK)
 
 	res := mustRequest(t, http.MethodGet, srv.URL+"/api/todos?done=true", nil)
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.StatusCode)
@@ -152,7 +152,7 @@ func TestIntegration_PUTBlankTitle(t *testing.T) {
 		"title": "  ",
 		"done":  true,
 	})
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", res.StatusCode)
@@ -172,7 +172,7 @@ func TestIntegration_CORSPreflight(t *testing.T) {
 	defer cleanup()
 
 	res := mustRequest(t, http.MethodOptions, srv.URL+"/api/todos", nil)
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", res.StatusCode)
@@ -191,7 +191,7 @@ func TestIntegration_CORSPreflight(t *testing.T) {
 func postTodo(t *testing.T, url, title string) map[string]any {
 	t.Helper()
 	res := mustJSONRequest(t, http.MethodPost, url, map[string]any{"title": title})
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("expected 201, got %d", res.StatusCode)
 	}
@@ -205,7 +205,7 @@ func postTodo(t *testing.T, url, title string) map[string]any {
 func mustJSONStatus(t *testing.T, method, url string, payload map[string]any, want int) {
 	t.Helper()
 	res := mustJSONRequest(t, method, url, payload)
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != want {
 		t.Fatalf("%s %s expected %d, got %d", method, url, want, res.StatusCode)
 	}

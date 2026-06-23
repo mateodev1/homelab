@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("sql.Open(%q): %v", dbPath, err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := store.Migrate(db); err != nil {
 		log.Fatalf("store.Migrate: %v", err)

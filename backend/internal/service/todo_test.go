@@ -93,7 +93,7 @@ func TestCreateTodo_AssignsID(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	got, err := svc.CreateTodo(ctx, "Learn TDD", time.Now())
+	got, err := svc.CreateTodo(ctx, "Learn TDD", "", "", time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestCreateTodo_PropagatesStoreError(t *testing.T) {
 	ms.err = errors.New("db full")
 	svc := service.NewTodoService(ms)
 
-	_, err := svc.CreateTodo(context.Background(), "Fail", time.Now())
+	_, err := svc.CreateTodo(context.Background(), "Fail", "", "", time.Now())
 	if err == nil {
 		t.Fatal("expected error from CreateTodo when store fails")
 	}
@@ -127,12 +127,12 @@ func TestListTodos(t *testing.T) {
 	ctx := context.Background()
 
 	for _, title := range []string{"A", "B", "C"} {
-		if _, err := svc.CreateTodo(ctx, title, time.Now()); err != nil {
+		if _, err := svc.CreateTodo(ctx, title, "", "", time.Now()); err != nil {
 			t.Fatalf("CreateTodo %q: %v", title, err)
 		}
 	}
 
-	if _, err := svc.UpdateTodo(ctx, 1, "A", true); err != nil {
+	if _, err := svc.UpdateTodo(ctx, 1, "A", "", "", false, true); err != nil {
 		t.Fatalf("UpdateTodo A done=true: %v", err)
 	}
 
@@ -181,7 +181,7 @@ func TestGetTodo_Found(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Find me", time.Now())
+	created, err := svc.CreateTodo(ctx, "Find me", "", "", time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -212,12 +212,12 @@ func TestUpdateTodo_PersistsChanges(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Original", time.Now())
+	created, err := svc.CreateTodo(ctx, "Original", "", "", time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
 
-	updated, err := svc.UpdateTodo(ctx, created.ID, "Updated", true)
+	updated, err := svc.UpdateTodo(ctx, created.ID, "Updated", "", "", false, true)
 	if err != nil {
 		t.Fatalf("UpdateTodo: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestUpdateTodo_NotFound(t *testing.T) {
 
 	svc := service.NewTodoService(newMockStore())
 
-	_, err := svc.UpdateTodo(context.Background(), 9999, "Ghost", true)
+	_, err := svc.UpdateTodo(context.Background(), 9999, "Ghost", "", "", false, true)
 	if err == nil {
 		t.Fatal("expected error updating non-existent todo")
 	}
@@ -246,7 +246,7 @@ func TestDeleteTodo_Removes(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Delete me", time.Now())
+	created, err := svc.CreateTodo(ctx, "Delete me", "", "", time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}

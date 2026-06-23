@@ -55,7 +55,7 @@ func (s *SQLiteStore) GetAll(ctx context.Context) ([]*domain.Todo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("store.GetAll: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var todos []*domain.Todo
 	for rows.Next() {

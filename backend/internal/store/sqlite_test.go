@@ -22,7 +22,7 @@ func openTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("sql.Open: %v", err)
 	}
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	if err := store.Migrate(db); err != nil {
 		t.Fatalf("store.Migrate: %v", err)
