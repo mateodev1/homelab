@@ -8,6 +8,3 @@ linters:
     - unused
     - gosimple
 
-linters-settings:
-  govet:
-    enable-all: false
