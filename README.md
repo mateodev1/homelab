@@ -28,7 +28,7 @@ domain → store → service → handler
 ## Prerequisites
 
 - Go 1.23+
-- Node 20+
+- Node 24+
 - pnpm 9+
 - Task (taskfile.dev)
 - Docker + Docker Compose
@@ -91,3 +91,7 @@ task docker:build
 # Start all services
 docker compose up
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full pre-push checklist: lint commands, test inventory, coverage requirements, and CI pipeline details.

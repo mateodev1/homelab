@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { useTodos } from './hooks/useTodos';
 
@@ -20,6 +20,10 @@ const mockHookBase = {
 };
 
 describe('App', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('renders NoteForm and NoteGrid using useTodos state', () => {
     mockedUseTodos.mockReturnValue({
       ...mockHookBase,
@@ -53,5 +57,95 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByLabelText(/cargando notas/i)).toBeInTheDocument();
+  });
+
+  it('search filtering — typing filters visible cards', () => {
+    mockedUseTodos.mockReturnValue({
+      ...mockHookBase,
+      todos: [
+        {
+          id: 1,
+          title: 'Alpha',
+          body: '',
+          color: 'default',
+          pinned: false,
+          done: false,
+          created_at: '2026-06-21T03:00:00Z',
+          updated_at: '2026-06-21T03:00:00Z',
+        },
+        {
+          id: 2,
+          title: 'Beta',
+          body: '',
+          color: 'default',
+          pinned: false,
+          done: false,
+          created_at: '2026-06-21T03:00:00Z',
+          updated_at: '2026-06-21T03:00:00Z',
+        },
+      ],
+    });
+
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('searchbox', { name: /buscar notas/i }), {
+      target: { value: 'alp' },
+    });
+
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('Beta')).not.toBeInTheDocument();
+  });
+
+  it('clear search button — click restores all todos', () => {
+    mockedUseTodos.mockReturnValue({
+      ...mockHookBase,
+      todos: [
+        {
+          id: 1,
+          title: 'Alpha',
+          body: '',
+          color: 'default',
+          pinned: false,
+          done: false,
+          created_at: '2026-06-21T03:00:00Z',
+          updated_at: '2026-06-21T03:00:00Z',
+        },
+        {
+          id: 2,
+          title: 'Beta',
+          body: '',
+          color: 'default',
+          pinned: false,
+          done: false,
+          created_at: '2026-06-21T03:00:00Z',
+          updated_at: '2026-06-21T03:00:00Z',
+        },
+      ],
+    });
+
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('searchbox', { name: /buscar notas/i }), {
+      target: { value: 'alp' },
+    });
+
+    expect(screen.queryByText('Beta')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /limpiar búsqueda/i }));
+
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+  });
+
+  it('error state — error message renders in NoteGrid', () => {
+    mockedUseTodos.mockReturnValue({
+      ...mockHookBase,
+      todos: [],
+      error: 'server error',
+    });
+
+    render(<App />);
+
+    expect(screen.getByText(/error al cargar notas: server error/i)).toBeInTheDocument();
   });
 });
