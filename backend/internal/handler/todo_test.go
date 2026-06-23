@@ -21,11 +21,11 @@ type mockTodoService struct {
 	err   error
 }
 
-func (m *mockTodoService) CreateTodo(_ context.Context, title string, createdAt time.Time) (*domain.Todo, error) {
+func (m *mockTodoService) CreateTodo(_ context.Context, title, body, color string, createdAt time.Time) (*domain.Todo, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	t := &domain.Todo{ID: int64(len(m.todos) + 1), Title: title, Done: false, CreatedAt: createdAt}
+	t := &domain.Todo{ID: int64(len(m.todos) + 1), Title: title, Body: body, Color: color, Done: false, CreatedAt: createdAt}
 	m.todos = append(m.todos, t)
 	return t, nil
 }
@@ -59,13 +59,16 @@ func (m *mockTodoService) GetTodo(_ context.Context, id int64) (*domain.Todo, er
 	return nil, domain.ErrNotFound
 }
 
-func (m *mockTodoService) UpdateTodo(_ context.Context, id int64, title string, done bool) (*domain.Todo, error) {
+func (m *mockTodoService) UpdateTodo(_ context.Context, id int64, title, body, color string, pinned, done bool) (*domain.Todo, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	for _, t := range m.todos {
 		if t.ID == id {
 			t.Title = title
+			t.Body = body
+			t.Color = color
+			t.Pinned = pinned
 			t.Done = done
 			cp := *t
 			return &cp, nil

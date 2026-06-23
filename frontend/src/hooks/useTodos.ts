@@ -7,7 +7,10 @@ interface UseTodosReturn {
   loading: boolean;
   error: string | null;
   addTodo: (title: string, body?: string, color?: string) => Promise<void>;
-  editTodo: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>) => Promise<void>;
+  editTodo: (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>,
+  ) => Promise<void>;
   toggleTodo: (id: number) => Promise<void>;
   togglePin: (id: number) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
