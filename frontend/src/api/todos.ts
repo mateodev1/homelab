@@ -17,7 +17,7 @@ export async function createTodo(payload: CreateTodoPayload): Promise<Todo> {
   const response = await fetch('/api/todos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ body: '', color: 'default', ...payload }),
   });
 
   return parseResponse<Todo>(response);

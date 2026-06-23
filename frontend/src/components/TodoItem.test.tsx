@@ -7,6 +7,9 @@ describe('TodoItem', () => {
   const todo: Todo = {
     id: 1,
     title: 'Write TodoItem tests',
+    body: '',
+    color: 'default',
+    pinned: false,
     done: false,
     created_at: '2026-06-21T01:00:00Z',
     updated_at: '2026-06-21T01:00:00Z',

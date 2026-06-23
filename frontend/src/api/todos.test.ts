@@ -19,6 +19,9 @@ describe('todos API client', () => {
       {
         id: 1,
         title: 'First todo',
+        body: '',
+        color: 'default',
+        pinned: false,
         done: false,
         created_at: '2026-06-20T10:00:00Z',
         updated_at: '2026-06-20T10:00:00Z',
@@ -48,6 +51,9 @@ describe('todos API client', () => {
     const created: Todo = {
       id: 2,
       title: 'Created',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: false,
       created_at: '2026-06-20T10:10:00Z',
       updated_at: '2026-06-20T10:10:00Z',
@@ -62,7 +68,7 @@ describe('todos API client', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/todos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Created' }),
+      body: JSON.stringify({ body: '', color: 'default', title: 'Created' }),
     });
   });
 
@@ -80,6 +86,9 @@ describe('todos API client', () => {
     const todo: Todo = {
       id: 3,
       title: 'Read me',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: true,
       created_at: '2026-06-20T10:20:00Z',
       updated_at: '2026-06-20T10:21:00Z',
@@ -108,6 +117,9 @@ describe('todos API client', () => {
     const updated: Todo = {
       id: 4,
       title: 'Updated',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: true,
       created_at: '2026-06-20T10:30:00Z',
       updated_at: '2026-06-20T10:40:00Z',

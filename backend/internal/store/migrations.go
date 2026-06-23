@@ -1,6 +1,9 @@
 package store
 
-import "database/sql"
+import (
+	"database/sql"
+	"strings"
+)
 
 // Migrate applies all schema migrations to the provided database.
 // It is idempotent: safe to call on an already-migrated database.
@@ -13,6 +16,24 @@ CREATE TABLE IF NOT EXISTS todos (
 	created_at TEXT    NOT NULL
 );`
 
-	_, err := db.Exec(schema)
-	return err
+	if _, err := db.Exec(schema); err != nil {
+		return err
+	}
+
+	alterations := []string{
+		`ALTER TABLE todos ADD COLUMN body       TEXT    NOT NULL DEFAULT ''`,
+		`ALTER TABLE todos ADD COLUMN color      TEXT    NOT NULL DEFAULT 'default'`,
+		`ALTER TABLE todos ADD COLUMN pinned     INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE todos ADD COLUMN updated_at TEXT    NOT NULL DEFAULT ''`,
+	}
+
+	for _, stmt := range alterations {
+		if _, err := db.Exec(stmt); err != nil {
+			if !strings.Contains(err.Error(), "duplicate column name") {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

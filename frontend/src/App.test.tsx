@@ -9,46 +9,49 @@ vi.mock('./hooks/useTodos', () => ({
 
 const mockedUseTodos = vi.mocked(useTodos);
 
+const mockHookBase = {
+  loading: false,
+  error: null,
+  addTodo: vi.fn(),
+  editTodo: vi.fn(),
+  toggleTodo: vi.fn(),
+  togglePin: vi.fn(),
+  removeTodo: vi.fn(),
+};
+
 describe('App', () => {
-  it('renders TodoForm and TodoList using useTodos state', () => {
+  it('renders NoteForm and NoteGrid using useTodos state', () => {
     mockedUseTodos.mockReturnValue({
+      ...mockHookBase,
       todos: [
         {
           id: 1,
           title: 'From hook',
+          body: '',
+          color: 'default',
+          pinned: false,
           done: false,
           created_at: '2026-06-21T03:00:00Z',
           updated_at: '2026-06-21T03:00:00Z',
         },
       ],
-      loading: false,
-      error: null,
-      addTodo: vi.fn(),
-      toggleTodo: vi.fn(),
-      removeTodo: vi.fn(),
     });
 
     render(<App />);
 
-    const heading = screen.getByRole('heading', { name: /todo app/i });
-    expect(heading).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /todo title/i })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: /buscar notas/i })).toBeInTheDocument();
     expect(screen.getByText('From hook')).toBeInTheDocument();
   });
 
-  it('renders without crashing when loading state is true', () => {
+  it('renders loading spinner when loading state is true', () => {
     mockedUseTodos.mockReturnValue({
+      ...mockHookBase,
       todos: [],
       loading: true,
-      error: null,
-      addTodo: vi.fn(),
-      toggleTodo: vi.fn(),
-      removeTodo: vi.fn(),
     });
 
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: /todo app/i })).toBeInTheDocument();
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByLabelText(/cargando notas/i)).toBeInTheDocument();
   });
 });

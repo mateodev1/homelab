@@ -8,6 +8,9 @@ describe('TodoList', () => {
     {
       id: 1,
       title: 'First',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: false,
       created_at: '2026-06-21T02:00:00Z',
       updated_at: '2026-06-21T02:00:00Z',
@@ -15,6 +18,9 @@ describe('TodoList', () => {
     {
       id: 2,
       title: 'Second',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: true,
       created_at: '2026-06-21T02:10:00Z',
       updated_at: '2026-06-21T02:10:00Z',

@@ -6,8 +6,10 @@ interface UseTodosReturn {
   todos: Todo[];
   loading: boolean;
   error: string | null;
-  addTodo: (title: string) => Promise<void>;
+  addTodo: (title: string, body?: string, color?: string) => Promise<void>;
+  editTodo: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>) => Promise<void>;
   toggleTodo: (id: number) => Promise<void>;
+  togglePin: (id: number) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
 }
 
@@ -47,11 +49,38 @@ export function useTodos(): UseTodosReturn {
     };
   }, []);
 
-  const addTodo = async (title: string) => {
+  const addTodo = async (title: string, body = '', color = 'default') => {
     try {
       setError(null);
-      const created = await createTodo({ title });
+      const created = await createTodo({ title, body, color });
       setTodos((current) => [...current, created]);
+    } catch (err) {
+      setError(toMessage(err));
+    }
+  };
+
+  const editTodo = async (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>,
+  ) => {
+    const currentTodo = todos.find((todo) => todo.id === id);
+    if (!currentTodo) return;
+
+    try {
+      setError(null);
+      const merged = { ...currentTodo, ...changes };
+      const updated = await updateTodo(id, {
+        title: merged.title,
+        body: merged.body,
+        color: merged.color,
+        pinned: merged.pinned,
+        done: merged.done,
+      });
+      setTodos((current) =>
+        current
+          .map((todo) => (todo.id === id ? updated : todo))
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned)),
+      );
     } catch (err) {
       setError(toMessage(err));
     }
@@ -59,18 +88,14 @@ export function useTodos(): UseTodosReturn {
 
   const toggleTodo = async (id: number) => {
     const currentTodo = todos.find((todo) => todo.id === id);
+    if (!currentTodo) return;
+    await editTodo(id, { done: !currentTodo.done });
+  };
 
-    if (!currentTodo) {
-      return;
-    }
-
-    try {
-      setError(null);
-      const updated = await updateTodo(id, { done: !currentTodo.done });
-      setTodos((current) => current.map((todo) => (todo.id === id ? updated : todo)));
-    } catch (err) {
-      setError(toMessage(err));
-    }
+  const togglePin = async (id: number) => {
+    const currentTodo = todos.find((todo) => todo.id === id);
+    if (!currentTodo) return;
+    await editTodo(id, { pinned: !currentTodo.pinned });
   };
 
   const removeTodo = async (id: number) => {
@@ -83,5 +108,5 @@ export function useTodos(): UseTodosReturn {
     }
   };
 
-  return { todos, loading, error, addTodo, toggleTodo, removeTodo };
+  return { todos, loading, error, addTodo, editTodo, toggleTodo, togglePin, removeTodo };
 }

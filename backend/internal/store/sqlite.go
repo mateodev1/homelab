@@ -26,9 +26,13 @@ var _ domain.TodoStore = (*SQLiteStore)(nil)
 
 // Create inserts a new Todo row and sets todo.ID to the new row's ID.
 func (s *SQLiteStore) Create(ctx context.Context, todo *domain.Todo) error {
-	const q = `INSERT INTO todos (title, done, created_at) VALUES (?, ?, ?)`
+	const q = `INSERT INTO todos (title, body, color, pinned, done, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
 
-	res, err := s.db.ExecContext(ctx, q, todo.Title, boolToInt(todo.Done), todo.CreatedAt.UTC().Format(time.RFC3339))
+	now := todo.CreatedAt.UTC().Format(time.RFC3339)
+	res, err := s.db.ExecContext(ctx, q,
+		todo.Title, todo.Body, todo.Color, boolToInt(todo.Pinned),
+		boolToInt(todo.Done), now, now,
+	)
 	if err != nil {
 		return fmt.Errorf("store.Create: %w", err)
 	}
@@ -39,12 +43,13 @@ func (s *SQLiteStore) Create(ctx context.Context, todo *domain.Todo) error {
 	}
 
 	todo.ID = id
+	todo.UpdatedAt = todo.CreatedAt
 	return nil
 }
 
-// GetAll returns all Todo rows ordered by id ascending.
+// GetAll returns all Todo rows ordered by pinned DESC, id ASC.
 func (s *SQLiteStore) GetAll(ctx context.Context) ([]*domain.Todo, error) {
-	const q = `SELECT id, title, done, created_at FROM todos ORDER BY id ASC`
+	const q = `SELECT id, title, body, color, pinned, done, created_at, updated_at FROM todos ORDER BY pinned DESC, id ASC`
 
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
@@ -72,7 +77,7 @@ func (s *SQLiteStore) GetAll(ctx context.Context) ([]*domain.Todo, error) {
 
 // GetByID returns the Todo with the given ID, or an error if not found.
 func (s *SQLiteStore) GetByID(ctx context.Context, id int64) (*domain.Todo, error) {
-	const q = `SELECT id, title, done, created_at FROM todos WHERE id = ?`
+	const q = `SELECT id, title, body, color, pinned, done, created_at, updated_at FROM todos WHERE id = ?`
 
 	row := s.db.QueryRowContext(ctx, q, id)
 	todo, err := scanTodoRow(row)
@@ -87,9 +92,13 @@ func (s *SQLiteStore) GetByID(ctx context.Context, id int64) (*domain.Todo, erro
 
 // Update persists changes to an existing Todo row.
 func (s *SQLiteStore) Update(ctx context.Context, todo *domain.Todo) error {
-	const q = `UPDATE todos SET title = ?, done = ? WHERE id = ?`
+	const q = `UPDATE todos SET title = ?, body = ?, color = ?, pinned = ?, done = ?, updated_at = ? WHERE id = ?`
 
-	res, err := s.db.ExecContext(ctx, q, todo.Title, boolToInt(todo.Done), todo.ID)
+	todo.UpdatedAt = time.Now().UTC()
+	res, err := s.db.ExecContext(ctx, q,
+		todo.Title, todo.Body, todo.Color, boolToInt(todo.Pinned),
+		boolToInt(todo.Done), todo.UpdatedAt.Format(time.RFC3339), todo.ID,
+	)
 	if err != nil {
 		return fmt.Errorf("store.Update: %w", err)
 	}
@@ -139,35 +148,59 @@ type scanner interface {
 func scanTodo(s scanner) (*domain.Todo, error) {
 	var (
 		todo      domain.Todo
+		pinned    int
 		done      int
 		createdAt string
+		updatedAt string
 	)
-	if err := s.Scan(&todo.ID, &todo.Title, &done, &createdAt); err != nil {
+	if err := s.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Color, &pinned, &done, &createdAt, &updatedAt); err != nil {
 		return nil, err
 	}
+	todo.Pinned = pinned != 0
 	todo.Done = done != 0
-	t, err := time.Parse(time.RFC3339, createdAt)
+	ca, err := time.Parse(time.RFC3339, createdAt)
 	if err != nil {
 		return nil, fmt.Errorf("parse created_at %q: %w", createdAt, err)
 	}
-	todo.CreatedAt = t
+	todo.CreatedAt = ca
+	if updatedAt != "" {
+		ua, err := time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("parse updated_at %q: %w", updatedAt, err)
+		}
+		todo.UpdatedAt = ua
+	} else {
+		todo.UpdatedAt = ca
+	}
 	return &todo, nil
 }
 
 func scanTodoRow(row *sql.Row) (*domain.Todo, error) {
 	var (
 		todo      domain.Todo
+		pinned    int
 		done      int
 		createdAt string
+		updatedAt string
 	)
-	if err := row.Scan(&todo.ID, &todo.Title, &done, &createdAt); err != nil {
+	if err := row.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Color, &pinned, &done, &createdAt, &updatedAt); err != nil {
 		return nil, err
 	}
+	todo.Pinned = pinned != 0
 	todo.Done = done != 0
-	t, err := time.Parse(time.RFC3339, createdAt)
+	ca, err := time.Parse(time.RFC3339, createdAt)
 	if err != nil {
 		return nil, fmt.Errorf("parse created_at %q: %w", createdAt, err)
 	}
-	todo.CreatedAt = t
+	todo.CreatedAt = ca
+	if updatedAt != "" {
+		ua, err := time.Parse(time.RFC3339, updatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("parse updated_at %q: %w", updatedAt, err)
+		}
+		todo.UpdatedAt = ua
+	} else {
+		todo.UpdatedAt = ca
+	}
 	return &todo, nil
 }

@@ -1,0 +1,501 @@
+/* ===== Reset & Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  background-color: #f8f9fa;
+  color: #202124;
+  min-height: 100vh;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+textarea,
+input {
+  font-family: inherit;
+  border: none;
+  outline: none;
+  resize: none;
+}
+
+/* ===== App Layout ===== */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ===== Header ===== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  height: 64px;
+}
+
+.app-header__logo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.app-header__logo-icon {
+  font-size: 24px;
+}
+
+.app-header__logo-text {
+  font-size: 22px;
+  font-weight: 400;
+  color: #5f6368;
+  letter-spacing: -0.5px;
+}
+
+.app-header__search {
+  flex: 1;
+  max-width: 720px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f1f3f4;
+  border-radius: 24px;
+  padding: 8px 16px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.app-header__search:focus-within {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.app-header__search-icon {
+  font-size: 18px;
+  margin-right: 12px;
+  color: #5f6368;
+}
+
+.app-header__search-input {
+  flex: 1;
+  background: transparent;
+  font-size: 16px;
+  color: #202124;
+}
+
+.app-header__search-input::placeholder {
+  color: #5f6368;
+}
+
+.app-header__search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.app-header__search-clear {
+  color: #5f6368;
+  font-size: 16px;
+  padding: 2px 4px;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.app-header__search-clear:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ===== Main ===== */
+.app-main {
+  padding: 24px 16px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ===== NoteForm ===== */
+.note-form {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+  overflow: visible;
+}
+
+.note-form:focus-within {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.note-form__title {
+  width: 100%;
+  padding: 12px 16px 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #202124;
+  background: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.note-form__title::placeholder {
+  color: #80868b;
+}
+
+.note-form__body-row {
+  padding: 8px 16px;
+}
+
+.note-form__placeholder {
+  width: 100%;
+  text-align: left;
+  padding: 4px 0;
+  font-size: 15px;
+  color: #80868b;
+  background: transparent;
+}
+
+.note-form__body {
+  width: 100%;
+  font-size: 14px;
+  color: #202124;
+  background: transparent;
+  min-height: 60px;
+  line-height: 1.5;
+}
+
+.note-form__body::placeholder {
+  color: #80868b;
+}
+
+.note-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 8px;
+}
+
+.note-form__color-picker-wrapper {
+  position: relative;
+}
+
+.note-form__icon-btn {
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 50%;
+  color: #5f6368;
+  transition: background 0.15s;
+}
+
+.note-form__icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.note-form__close-btn {
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+  transition: background 0.15s;
+}
+
+.note-form__close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ===== Color Picker ===== */
+.color-picker-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 200;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  width: 200px;
+}
+
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: transform 0.1s, border-color 0.1s;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch--active {
+  border-color: #1a73e8;
+  transform: scale(1.1);
+}
+
+/* ===== NoteGrid ===== */
+.note-grid {
+  padding-top: 8px;
+}
+
+.note-grid__section {
+  margin-bottom: 24px;
+}
+
+.note-grid__section-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  color: #5f6368;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.note-grid__masonry {
+  columns: 1;
+  column-gap: 16px;
+}
+
+@media (min-width: 480px) {
+  .note-grid__masonry {
+    columns: 2;
+  }
+}
+
+@media (min-width: 768px) {
+  .note-grid__masonry {
+    columns: 3;
+  }
+}
+
+@media (min-width: 1100px) {
+  .note-grid__masonry {
+    columns: 4;
+  }
+}
+
+.note-grid__status {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.note-grid__status--error {
+  color: #d93025;
+}
+
+.note-grid__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 16px;
+  gap: 16px;
+  color: #5f6368;
+}
+
+.note-grid__empty-icon {
+  font-size: 80px;
+  opacity: 0.15;
+}
+
+.note-grid__empty p {
+  font-size: 16px;
+}
+
+/* ===== Spinner ===== */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== NoteCard ===== */
+.note-card {
+  break-inside: avoid;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s;
+  position: relative;
+  overflow: visible;
+}
+
+.note-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.note-card--done .note-card__title,
+.note-card--done .note-card__body {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* Top actions (pin) — visible on hover */
+.note-card__actions-top {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.note-card:hover .note-card__actions-top {
+  opacity: 1;
+}
+
+.note-card__pin {
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 50%;
+  color: #5f6368;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.note-card__pin:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.note-card__pin--active {
+  opacity: 1 !important;
+  filter: none;
+}
+
+/* Title */
+.note-card__title {
+  padding: 12px 36px 4px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #202124;
+  cursor: text;
+  word-break: break-word;
+  min-height: 24px;
+}
+
+.note-card__title-input {
+  width: 100%;
+  padding: 12px 36px 4px 16px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #202124;
+  background: transparent;
+  word-break: break-word;
+}
+
+/* Body */
+.note-card__body {
+  padding: 4px 16px 8px;
+  font-size: 14px;
+  color: #202124;
+  cursor: text;
+  word-break: break-word;
+  line-height: 1.5;
+  min-height: 20px;
+}
+
+.note-card__body--empty {
+  color: #80868b;
+  font-style: italic;
+}
+
+.note-card__body-input {
+  width: 100%;
+  padding: 4px 16px 8px;
+  font-size: 14px;
+  color: #202124;
+  background: transparent;
+  line-height: 1.5;
+  min-height: 60px;
+}
+
+/* Footer */
+.note-card__footer {
+  padding: 4px 8px 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.note-card:hover .note-card__footer {
+  opacity: 1;
+}
+
+.note-card__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.note-card__check {
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 50%;
+  color: #5f6368;
+  transition: background 0.15s;
+}
+
+.note-card__check:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.note-card__check--done {
+  color: #1a73e8;
+}
+
+.note-card__color-picker-wrapper {
+  position: relative;
+}
+
+.note-card__color-btn {
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 50%;
+  color: #5f6368;
+  transition: background 0.15s;
+}
+
+.note-card__color-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.note-card__delete {
+  font-size: 16px;
+  padding: 6px;
+  border-radius: 50%;
+  color: #5f6368;
+  margin-left: auto;
+  transition: background 0.15s;
+}
+
+.note-card__delete:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #d93025;
+}

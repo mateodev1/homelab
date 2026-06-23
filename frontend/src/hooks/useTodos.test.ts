@@ -27,6 +27,9 @@ describe('useTodos', () => {
       {
         id: 1,
         title: 'Write tests first',
+        body: '',
+        color: 'default',
+        pinned: false,
         done: false,
         created_at: '2026-06-21T00:00:00Z',
         updated_at: '2026-06-21T00:00:00Z',
@@ -65,6 +68,9 @@ describe('useTodos', () => {
     const created: Todo = {
       id: 2,
       title: 'New task',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: false,
       created_at: '2026-06-21T00:10:00Z',
       updated_at: '2026-06-21T00:10:00Z',
@@ -83,7 +89,7 @@ describe('useTodos', () => {
       await result.current.addTodo('New task');
     });
 
-    expect(mockedCreateTodo).toHaveBeenCalledWith({ title: 'New task' });
+    expect(mockedCreateTodo).toHaveBeenCalledWith({ title: 'New task', body: '', color: 'default' });
     expect(result.current.todos).toEqual([created]);
   });
 
@@ -91,6 +97,9 @@ describe('useTodos', () => {
     const baseTodo: Todo = {
       id: 3,
       title: 'Toggle me',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: false,
       created_at: '2026-06-21T00:20:00Z',
       updated_at: '2026-06-21T00:20:00Z',
@@ -114,7 +123,13 @@ describe('useTodos', () => {
       await result.current.toggleTodo(3);
     });
 
-    expect(mockedUpdateTodo).toHaveBeenCalledWith(3, { done: true });
+    expect(mockedUpdateTodo).toHaveBeenCalledWith(3, {
+      title: 'Toggle me',
+      body: '',
+      color: 'default',
+      pinned: false,
+      done: true,
+    });
     expect(result.current.todos).toEqual([toggledTodo]);
   });
 
@@ -122,6 +137,9 @@ describe('useTodos', () => {
     const existing: Todo = {
       id: 4,
       title: 'Delete me',
+      body: '',
+      color: 'default',
+      pinned: false,
       done: false,
       created_at: '2026-06-21T00:40:00Z',
       updated_at: '2026-06-21T00:40:00Z',

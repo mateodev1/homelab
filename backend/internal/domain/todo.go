@@ -12,8 +12,12 @@ var ErrNotFound = errors.New("not found")
 type Todo struct {
 	ID        int64
 	Title     string
+	Body      string
+	Color     string
+	Pinned    bool
 	Done      bool
 	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type HealthStatus struct {

@@ -19,10 +19,15 @@ func NewTodoService(store domain.TodoStore) *TodoService {
 	return &TodoService{store: store}
 }
 
-// CreateTodo creates a new Todo with the given title and persists it.
-func (s *TodoService) CreateTodo(ctx context.Context, title string, createdAt time.Time) (*domain.Todo, error) {
+// CreateTodo creates a new Todo with the given fields and persists it.
+func (s *TodoService) CreateTodo(ctx context.Context, title, body, color string, createdAt time.Time) (*domain.Todo, error) {
+	if color == "" {
+		color = "default"
+	}
 	todo := &domain.Todo{
 		Title:     title,
+		Body:      body,
+		Color:     color,
 		Done:      false,
 		CreatedAt: createdAt.UTC(),
 	}
@@ -59,13 +64,16 @@ func (s *TodoService) GetTodo(ctx context.Context, id int64) (*domain.Todo, erro
 	return todo, nil
 }
 
-// UpdateTodo updates the title and done status of an existing Todo.
-func (s *TodoService) UpdateTodo(ctx context.Context, id int64, title string, done bool) (*domain.Todo, error) {
+// UpdateTodo updates fields of an existing Todo.
+func (s *TodoService) UpdateTodo(ctx context.Context, id int64, title, body, color string, pinned, done bool) (*domain.Todo, error) {
 	todo, err := s.store.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("service.UpdateTodo(%d): %w", id, err)
 	}
 	todo.Title = title
+	todo.Body = body
+	todo.Color = color
+	todo.Pinned = pinned
 	todo.Done = done
 	if err := s.store.Update(ctx, todo); err != nil {
 		return nil, fmt.Errorf("service.UpdateTodo(%d) persist: %w", id, err)

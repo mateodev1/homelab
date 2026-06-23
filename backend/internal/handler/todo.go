@@ -16,10 +16,10 @@ import (
 // Defined here to satisfy the dependency-inversion principle —
 // the handler package owns the interface it needs.
 type TodoServicer interface {
-	CreateTodo(ctx context.Context, title string, createdAt time.Time) (*domain.Todo, error)
+	CreateTodo(ctx context.Context, title, body, color string, createdAt time.Time) (*domain.Todo, error)
 	ListTodos(ctx context.Context, done *bool) ([]*domain.Todo, error)
 	GetTodo(ctx context.Context, id int64) (*domain.Todo, error)
-	UpdateTodo(ctx context.Context, id int64, title string, done bool) (*domain.Todo, error)
+	UpdateTodo(ctx context.Context, id int64, title, body, color string, pinned, done bool) (*domain.Todo, error)
 	DeleteTodo(ctx context.Context, id int64) error
 }
 
@@ -94,6 +94,8 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Title string `json:"title"`
+		Body  string `json:"body"`
+		Color string `json:"color"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -104,7 +106,7 @@ func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todo, err := h.svc.CreateTodo(r.Context(), req.Title, time.Now())
+	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Color, time.Now())
 	if err != nil {
 		jsonError(w, "failed to create todo", http.StatusInternalServerError)
 		return
@@ -144,8 +146,11 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Title string `json:"title"`
-		Done  bool   `json:"done"`
+		Title  string `json:"title"`
+		Body   string `json:"body"`
+		Color  string `json:"color"`
+		Pinned bool   `json:"pinned"`
+		Done   bool   `json:"done"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -156,7 +161,7 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todo, err := h.svc.UpdateTodo(r.Context(), id, req.Title, req.Done)
+	todo, err := h.svc.UpdateTodo(r.Context(), id, req.Title, req.Body, req.Color, req.Pinned, req.Done)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			jsonError(w, "not found", http.StatusNotFound)
@@ -201,8 +206,12 @@ func todoResponse(t *domain.Todo) map[string]any {
 	return map[string]any{
 		"id":         t.ID,
 		"title":      t.Title,
+		"body":       t.Body,
+		"color":      t.Color,
+		"pinned":     t.Pinned,
 		"done":       t.Done,
 		"created_at": t.CreatedAt.Format(time.RFC3339),
+		"updated_at": t.UpdatedAt.Format(time.RFC3339),
 	}
 }
 
