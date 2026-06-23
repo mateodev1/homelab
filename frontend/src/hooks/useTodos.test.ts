@@ -89,7 +89,11 @@ describe('useTodos', () => {
       await result.current.addTodo('New task');
     });
 
-    expect(mockedCreateTodo).toHaveBeenCalledWith({ title: 'New task', body: '', color: 'default' });
+    expect(mockedCreateTodo).toHaveBeenCalledWith({
+      title: 'New task',
+      body: '',
+      color: 'default',
+    });
     expect(result.current.todos).toEqual([created]);
   });
 
