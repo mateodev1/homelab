@@ -109,7 +109,10 @@ pnpm --dir frontend run coverage
 | `src/components/TodoForm.test.tsx` | submit disabled on empty, controlled input, calls `onAdd` and clears on submit |
 | `src/components/TodoItem.test.tsx` | renders title/checkbox, `onToggle` on click, `onDelete` on click, line-through when done |
 | `src/components/TodoList.test.tsx` | loading state, error state, empty state, renders items |
-| `src/App.test.tsx` | renders NoteForm + NoteGrid from hook state, loading spinner |
+| `src/components/NoteCard.test.tsx` | render, pin, done toggle, delete, title edit/revert/escape/enter, body edit/escape, color picker, done class |
+| `src/components/NoteForm.test.tsx` | placeholder render, expand, commit with/without title, escape collapse, color picker, click outside |
+| `src/components/NoteGrid.test.tsx` | loading, error, empty, only-pinned, only-unpinned, mixed sections |
+| `src/App.test.tsx` | renders NoteForm + NoteGrid from hook state, loading spinner, search filtering, clear search, error state |
 
 ---
 
@@ -125,10 +128,30 @@ lint-frontend ──→ test-frontend ──→ build (Go backend + CLI)
 lint-go ──→ test-go ──────────────────────┘
 ```
 
-| Job | Tool | Config |
-|---|---|---|
-| `lint-go` | `golangci-lint-action@v9`, golangci-lint `v2.3.0` | `backend/.golangci.yml` |
-| `test-go` | `go test -race`, coverage ≥ 60% | `backend/go.mod` |
-| `lint-frontend` | Biome `check` + `tsc --noEmit` | `frontend/biome.json` |
-| `test-frontend` | Vitest with coverage | `frontend/vitest.config` |
-| `build` | `go build ./backend/cmd/api`, `go build ./cli/cmd/homelab` | — |
+On tag push (`v*.*.*`), after all CI jobs pass:
+
+```
+build ──→ build-and-push-backend ──┐
+          build-and-push-frontend ──┴──→ deploy
+```
+
+| Job | Trigger | Tool | Config |
+|---|---|---|---|
+| `lint-go` | always | `golangci-lint-action@v9`, golangci-lint `v2.3.0` | `backend/.golangci.yml` |
+| `test-go` | always | `go test -race`, coverage ≥ 60% | `backend/go.mod` |
+| `lint-frontend` | always | Biome `check` + `tsc --noEmit` | `frontend/biome.json` |
+| `test-frontend` | always | Vitest with coverage | `frontend/vitest.config` |
+| `build` | always | `go build ./backend/cmd/api`, `go build ./cli/cmd/homelab` | — |
+| `build-and-push-backend` | tag only | `docker/build-push-action@v6`, pushes to GHCR | `docker/backend.Dockerfile` |
+| `build-and-push-frontend` | tag only | `docker/build-push-action@v6`, pushes to GHCR | `docker/frontend.Dockerfile` |
+| `deploy` | tag only | `docker compose pull && up -d` on self-hosted runner | `environment: homelab` |
+
+---
+
+## Deploy to production
+
+```bash
+git tag v0.1.7 && git push origin v0.1.7
+```
+
+This triggers the full CI pipeline. If all tests pass, the Docker images are built, pushed to GHCR, and deployed automatically.
