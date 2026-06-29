@@ -67,8 +67,8 @@ func TestIntegration_CRUDCycle(t *testing.T) {
 	}
 
 	resUpdate := mustJSONRequest(t, http.MethodPut, fmt.Sprintf("%s/api/todos/%d", srv.URL, id), map[string]any{
-		"title": "first updated",
-		"done":  true,
+		"title":  "first updated",
+		"status": "done",
 	})
 	defer func() { _ = resUpdate.Body.Close() }()
 	if resUpdate.StatusCode != http.StatusOK {
@@ -108,18 +108,15 @@ func TestIntegration_GetNotFound(t *testing.T) {
 	}
 }
 
-func TestIntegration_DoneFilter(t *testing.T) {
+func TestIntegration_ListTodos(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	a := postTodo(t, srv.URL+"/api/todos", "a")
-	b := postTodo(t, srv.URL+"/api/todos", "b")
 	_ = postTodo(t, srv.URL+"/api/todos", "c")
+	_ = postTodo(t, srv.URL+"/api/todos", "a")
+	_ = postTodo(t, srv.URL+"/api/todos", "b")
 
-	mustJSONStatus(t, http.MethodPut, fmt.Sprintf("%s/api/todos/%d", srv.URL, int64(a["id"].(float64))), map[string]any{"title": "a", "done": true}, http.StatusOK)
-	mustJSONStatus(t, http.MethodPut, fmt.Sprintf("%s/api/todos/%d", srv.URL, int64(b["id"].(float64))), map[string]any{"title": "b", "done": true}, http.StatusOK)
-
-	res := mustRequest(t, http.MethodGet, srv.URL+"/api/todos?done=true", nil)
+	res := mustRequest(t, http.MethodGet, srv.URL+"/api/todos", nil)
 	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusOK {
@@ -130,13 +127,12 @@ func TestIntegration_DoneFilter(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&todos); err != nil {
 		t.Fatalf("decode body: %v", err)
 	}
-	if len(todos) != 2 {
-		t.Fatalf("expected 2 todos, got %d", len(todos))
+	if len(todos) != 3 {
+		t.Fatalf("expected 3 todos, got %d", len(todos))
 	}
-	for i, todo := range todos {
-		done, ok := todo["done"].(bool)
-		if !ok || !done {
-			t.Fatalf("todo[%d] expected done=true, got %v", i, todo["done"])
+	for _, todo := range todos {
+		if _, ok := todo["done"]; ok {
+			t.Fatalf("expected no done field in response")
 		}
 	}
 }
@@ -150,7 +146,7 @@ func TestIntegration_PUTBlankTitle(t *testing.T) {
 
 	res := mustJSONRequest(t, http.MethodPut, fmt.Sprintf("%s/api/todos/%d", srv.URL, id), map[string]any{
 		"title": "  ",
-		"done":  true,
+		"status": "done",
 	})
 	defer func() { _ = res.Body.Close() }()
 
