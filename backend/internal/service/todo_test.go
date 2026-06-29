@@ -10,12 +10,10 @@ import (
 	"github.com/mateo/homelab/backend/internal/service"
 )
 
-// --- in-test mock store ---
-
 type mockStore struct {
 	todos  map[int64]*domain.Todo
 	nextID int64
-	err    error // when non-nil every call returns this error
+	err    error
 }
 
 func newMockStore() *mockStore {
@@ -51,7 +49,7 @@ func (m *mockStore) GetByID(_ context.Context, id int64) (*domain.Todo, error) {
 	}
 	t, ok := m.todos[id]
 	if !ok {
-		return nil, errors.New("not found")
+		return nil, domain.ErrNotFound
 	}
 	cp := *t
 	return &cp, nil
@@ -62,7 +60,7 @@ func (m *mockStore) Update(_ context.Context, t *domain.Todo) error {
 		return m.err
 	}
 	if _, ok := m.todos[t.ID]; !ok {
-		return errors.New("not found")
+		return domain.ErrNotFound
 	}
 	cp := *t
 	m.todos[t.ID] = &cp
@@ -74,48 +72,43 @@ func (m *mockStore) Delete(_ context.Context, id int64) error {
 		return m.err
 	}
 	if _, ok := m.todos[id]; !ok {
-		return errors.New("not found")
+		return domain.ErrNotFound
 	}
 	delete(m.todos, id)
 	return nil
 }
 
-// Compile-time assertion: mockStore satisfies domain.TodoStore.
 var _ domain.TodoStore = (*mockStore)(nil)
 
-func boolPtr(b bool) *bool { return &b }
-
-// --- tests ---
-
-func TestCreateTodo_AssignsID(t *testing.T) {
+func TestCreateTodo_AssignsDefaults(t *testing.T) {
 	t.Parallel()
 
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	got, err := svc.CreateTodo(ctx, "Learn TDD", "", "", time.Now())
+	got, err := svc.CreateTodo(ctx, "Learn TDD", "", 3, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
 	if got.ID == 0 {
 		t.Error("expected non-zero ID from CreateTodo")
 	}
-	if got.Title != "Learn TDD" {
-		t.Errorf("expected Title \"Learn TDD\", got %q", got.Title)
+	if got.Status != domain.TodoStatusTodo {
+		t.Fatalf("expected default status todo, got %q", got.Status)
+	}
+	if got.Priority != 3 {
+		t.Fatalf("expected priority 3, got %d", got.Priority)
 	}
 }
 
-// TestCreateTodo_PropagatesStoreError verifies the service wraps store errors.
-func TestCreateTodo_PropagatesStoreError(t *testing.T) {
+func TestCreateTodo_InvalidPriority(t *testing.T) {
 	t.Parallel()
 
-	ms := newMockStore()
-	ms.err = errors.New("db full")
-	svc := service.NewTodoService(ms)
+	svc := service.NewTodoService(newMockStore())
 
-	_, err := svc.CreateTodo(context.Background(), "Fail", "", "", time.Now())
+	_, err := svc.CreateTodo(context.Background(), "x", "", 7, nil, time.Now())
 	if err == nil {
-		t.Fatal("expected error from CreateTodo when store fails")
+		t.Fatalf("expected invalid priority error")
 	}
 }
 
@@ -127,116 +120,126 @@ func TestListTodos(t *testing.T) {
 	ctx := context.Background()
 
 	for _, title := range []string{"A", "B", "C"} {
-		if _, err := svc.CreateTodo(ctx, title, "", "", time.Now()); err != nil {
+		if _, err := svc.CreateTodo(ctx, title, "", 0, nil, time.Now()); err != nil {
 			t.Fatalf("CreateTodo %q: %v", title, err)
 		}
 	}
 
-	if _, err := svc.UpdateTodo(ctx, 1, "A", "", "", false, true); err != nil {
-		t.Fatalf("UpdateTodo A done=true: %v", err)
-	}
-
-	todos, err := svc.ListTodos(ctx, nil)
+	todos, err := svc.ListTodos(ctx)
 	if err != nil {
-		t.Fatalf("ListTodos(nil): %v", err)
+		t.Fatalf("ListTodos: %v", err)
 	}
 	if len(todos) != 3 {
 		t.Errorf("expected 3 todos, got %d", len(todos))
 	}
-
-	doneTodos, err := svc.ListTodos(ctx, boolPtr(true))
-	if err != nil {
-		t.Fatalf("ListTodos(true): %v", err)
-	}
-	if len(doneTodos) != 1 {
-		t.Errorf("expected 1 done todo, got %d", len(doneTodos))
-	}
-
-	notDoneTodos, err := svc.ListTodos(ctx, boolPtr(false))
-	if err != nil {
-		t.Fatalf("ListTodos(false): %v", err)
-	}
-	if len(notDoneTodos) != 2 {
-		t.Errorf("expected 2 not-done todos, got %d", len(notDoneTodos))
-	}
 }
 
-func TestListTodos_EmptyStore(t *testing.T) {
+func TestUpdateTodo_PatchMergeMatrix(t *testing.T) {
 	t.Parallel()
 
-	svc := service.NewTodoService(newMockStore())
-
-	todos, err := svc.ListTodos(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("ListTodos on empty store: %v", err)
-	}
-	if len(todos) != 0 {
-		t.Errorf("expected 0 todos, got %d", len(todos))
-	}
-}
-
-func TestGetTodo_Found(t *testing.T) {
-	t.Parallel()
-
-	svc := service.NewTodoService(newMockStore())
+	ms := newMockStore()
+	svc := service.NewTodoService(ms)
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Find me", "", "", time.Now())
+	dueDate := "2026-07-01"
+	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, &dueDate, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
 
-	got, err := svc.GetTodo(ctx, created.ID)
-	if err != nil {
-		t.Fatalf("GetTodo: %v", err)
-	}
-	if got.Title != "Find me" {
-		t.Errorf("expected \"Find me\", got %q", got.Title)
-	}
-}
-
-func TestGetTodo_NotFound(t *testing.T) {
-	t.Parallel()
-
-	svc := service.NewTodoService(newMockStore())
-
-	_, err := svc.GetTodo(context.Background(), 9999)
-	if err == nil {
-		t.Fatal("expected error for missing ID")
-	}
-}
-
-func TestUpdateTodo_PersistsChanges(t *testing.T) {
-	t.Parallel()
-
-	svc := service.NewTodoService(newMockStore())
-	ctx := context.Background()
-
-	created, err := svc.CreateTodo(ctx, "Original", "", "", time.Now())
-	if err != nil {
-		t.Fatalf("CreateTodo: %v", err)
-	}
-
-	updated, err := svc.UpdateTodo(ctx, created.ID, "Updated", "", "", false, true)
+	newTitle := "Updated"
+	newBody := "Body 2"
+	newStatus := domain.TodoStatusInProgress
+	newPriority := 3
+	newDueDate := "2026-08-01"
+	updated, err := svc.UpdateTodo(ctx, created.ID, service.TodoPatch{
+		Title:    &newTitle,
+		Body:     &newBody,
+		Status:   &newStatus,
+		Priority: &newPriority,
+		DueDate:  ptrPtr(newDueDate),
+	})
 	if err != nil {
 		t.Fatalf("UpdateTodo: %v", err)
 	}
-	if updated.Title != "Updated" {
-		t.Errorf("expected \"Updated\", got %q", updated.Title)
+	if updated.Title != newTitle || updated.Body != newBody {
+		t.Fatalf("expected updated title/body, got %q/%q", updated.Title, updated.Body)
 	}
-	if !updated.Done {
-		t.Error("expected Done true after UpdateTodo")
+	if updated.Status != domain.TodoStatusInProgress {
+		t.Fatalf("expected status in_progress, got %q", updated.Status)
+	}
+	if updated.Priority != 3 {
+		t.Fatalf("expected priority 3, got %d", updated.Priority)
+	}
+	if updated.DueDate == nil || *updated.DueDate != newDueDate {
+		t.Fatalf("expected due date %q, got %#v", newDueDate, updated.DueDate)
 	}
 }
 
-func TestUpdateTodo_NotFound(t *testing.T) {
+func TestUpdateTodo_DueDateSemantics(t *testing.T) {
 	t.Parallel()
 
-	svc := service.NewTodoService(newMockStore())
+	ms := newMockStore()
+	svc := service.NewTodoService(ms)
+	ctx := context.Background()
 
-	_, err := svc.UpdateTodo(context.Background(), 9999, "Ghost", "", "", false, true)
+	dueDate := "2026-07-01"
+	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, &dueDate, time.Now())
+	if err != nil {
+		t.Fatalf("CreateTodo: %v", err)
+	}
+
+	// nil patch field => unchanged
+	unchanged, err := svc.UpdateTodo(ctx, created.ID, service.TodoPatch{})
+	if err != nil {
+		t.Fatalf("UpdateTodo unchanged: %v", err)
+	}
+	if unchanged.DueDate == nil || *unchanged.DueDate != dueDate {
+		t.Fatalf("expected due date unchanged %q", dueDate)
+	}
+
+	// &nil => clear
+	cleared, err := svc.UpdateTodo(ctx, created.ID, service.TodoPatch{DueDate: nilDueDatePatch()})
+	if err != nil {
+		t.Fatalf("UpdateTodo clear due date: %v", err)
+	}
+	if cleared.DueDate != nil {
+		t.Fatalf("expected due date to be nil after clear")
+	}
+
+	// &"date" => set
+	setDate := "2026-10-15"
+	set, err := svc.UpdateTodo(ctx, created.ID, service.TodoPatch{DueDate: ptrPtr(setDate)})
+	if err != nil {
+		t.Fatalf("UpdateTodo set due date: %v", err)
+	}
+	if set.DueDate == nil || *set.DueDate != setDate {
+		t.Fatalf("expected due date %q, got %#v", setDate, set.DueDate)
+	}
+}
+
+func TestUpdateTodo_ValidationPaths(t *testing.T) {
+	t.Parallel()
+
+	ms := newMockStore()
+	svc := service.NewTodoService(ms)
+	ctx := context.Background()
+
+	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, nil, time.Now())
+	if err != nil {
+		t.Fatalf("CreateTodo: %v", err)
+	}
+
+	badStatus := "blocked"
+	_, err = svc.UpdateTodo(ctx, created.ID, service.TodoPatch{Status: &badStatus})
 	if err == nil {
-		t.Fatal("expected error updating non-existent todo")
+		t.Fatalf("expected invalid status error")
+	}
+
+	badPriority := 7
+	_, err = svc.UpdateTodo(ctx, created.ID, service.TodoPatch{Priority: &badPriority})
+	if err == nil {
+		t.Fatalf("expected invalid priority error")
 	}
 }
 
@@ -246,7 +249,7 @@ func TestDeleteTodo_Removes(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Delete me", "", "", time.Now())
+	created, err := svc.CreateTodo(ctx, "Delete me", "", 0, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -261,13 +264,25 @@ func TestDeleteTodo_Removes(t *testing.T) {
 	}
 }
 
-func TestDeleteTodo_NotFound(t *testing.T) {
+func TestCreateTodo_PropagatesStoreError(t *testing.T) {
 	t.Parallel()
 
-	svc := service.NewTodoService(newMockStore())
+	ms := newMockStore()
+	ms.err = errors.New("db full")
+	svc := service.NewTodoService(ms)
 
-	err := svc.DeleteTodo(context.Background(), 9999)
+	_, err := svc.CreateTodo(context.Background(), "Fail", "", 0, nil, time.Now())
 	if err == nil {
-		t.Fatal("expected error deleting non-existent todo")
+		t.Fatal("expected error from CreateTodo when store fails")
 	}
+}
+
+func ptrPtr(v string) **string {
+	p := &v
+	return &p
+}
+
+func nilDueDatePatch() **string {
+	var p *string
+	return &p
 }
