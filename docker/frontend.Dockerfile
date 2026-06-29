@@ -27,6 +27,12 @@ CMD ["pnpm", "dev", "--host"]
 # ---------------------------------------------------------------------------
 FROM base AS build
 
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+
+ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN
+ENV VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID
+
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/ .
