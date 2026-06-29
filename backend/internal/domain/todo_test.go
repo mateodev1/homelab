@@ -36,8 +36,14 @@ func TestTodoZeroValue(t *testing.T) {
 	if todo.Title != "" {
 		t.Errorf("expected Title zero value \"\", got %q", todo.Title)
 	}
-	if todo.Done != false {
-		t.Error("expected Done zero value false, got true")
+	if todo.Status != "" {
+		t.Errorf("expected Status zero value \"\", got %q", todo.Status)
+	}
+	if todo.Priority != 0 {
+		t.Errorf("expected Priority zero value 0, got %d", todo.Priority)
+	}
+	if todo.DueDate != nil {
+		t.Errorf("expected DueDate zero value nil, got %v", *todo.DueDate)
 	}
 	if !todo.CreatedAt.IsZero() {
 		t.Errorf("expected CreatedAt zero value, got %v", todo.CreatedAt)
@@ -52,7 +58,9 @@ func TestTodoFieldAssignment(t *testing.T) {
 	todo := domain.Todo{
 		ID:        42,
 		Title:     "Buy milk",
-		Done:      true,
+		Status:    domain.TodoStatusDone,
+		Priority:  3,
+		DueDate:   ptr("2026-07-15"),
 		CreatedAt: now,
 	}
 
@@ -62,12 +70,43 @@ func TestTodoFieldAssignment(t *testing.T) {
 	if todo.Title != "Buy milk" {
 		t.Errorf("expected Title \"Buy milk\", got %q", todo.Title)
 	}
-	if !todo.Done {
-		t.Error("expected Done true, got false")
+	if todo.Status != domain.TodoStatusDone {
+		t.Errorf("expected Status %q, got %q", domain.TodoStatusDone, todo.Status)
+	}
+	if todo.Priority != 3 {
+		t.Errorf("expected Priority 3, got %d", todo.Priority)
+	}
+	if todo.DueDate == nil || *todo.DueDate != "2026-07-15" {
+		t.Fatalf("expected DueDate to be set")
 	}
 	if !todo.CreatedAt.Equal(now) {
 		t.Errorf("expected CreatedAt %v, got %v", now, todo.CreatedAt)
 	}
+}
+
+func TestValidStatuses(t *testing.T) {
+	t.Parallel()
+
+	statuses := []string{
+		domain.TodoStatusTodo,
+		domain.TodoStatusInProgress,
+		domain.TodoStatusDone,
+		domain.TodoStatusCancelled,
+	}
+
+	for _, s := range statuses {
+		if !domain.ValidStatuses[s] {
+			t.Fatalf("expected status %q to be valid", s)
+		}
+	}
+
+	if domain.ValidStatuses["blocked"] {
+		t.Fatalf("expected status %q to be invalid", "blocked")
+	}
+}
+
+func ptr(v string) *string {
+	return &v
 }
 
 func TestErrNotFound(t *testing.T) {

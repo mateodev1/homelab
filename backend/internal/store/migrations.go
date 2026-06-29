@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS todos (
 		`ALTER TABLE todos ADD COLUMN color      TEXT    NOT NULL DEFAULT 'default'`,
 		`ALTER TABLE todos ADD COLUMN pinned     INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE todos ADD COLUMN updated_at TEXT    NOT NULL DEFAULT ''`,
+		`ALTER TABLE todos ADD COLUMN status     TEXT    NOT NULL DEFAULT 'todo'`,
+		`ALTER TABLE todos ADD COLUMN priority   INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE todos ADD COLUMN due_date   TEXT    NULL`,
 	}
 
 	for _, stmt := range alterations {
@@ -33,6 +36,10 @@ CREATE TABLE IF NOT EXISTS todos (
 				return err
 			}
 		}
+	}
+
+	if _, err := db.Exec(`UPDATE todos SET status = 'done' WHERE done = 1 AND status = 'todo'`); err != nil {
+		return err
 	}
 
 	return nil
