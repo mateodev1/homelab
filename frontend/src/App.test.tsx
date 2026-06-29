@@ -1,7 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
+import { ThemeProvider } from './context/ThemeContext';
 import { useTodos } from './hooks/useTodos';
+
+const renderApp = () =>
+  render(
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>,
+  );
 
 vi.mock('./hooks/useTodos', () => ({
   useTodos: vi.fn(),
@@ -41,7 +49,7 @@ describe('App', () => {
       ],
     });
 
-    render(<App />);
+    renderApp();
 
     expect(screen.getByRole('searchbox', { name: /buscar notas/i })).toBeInTheDocument();
     expect(screen.getByText('From hook')).toBeInTheDocument();
@@ -54,7 +62,7 @@ describe('App', () => {
       loading: true,
     });
 
-    render(<App />);
+    renderApp();
 
     expect(screen.getByLabelText(/cargando notas/i)).toBeInTheDocument();
   });
@@ -86,7 +94,7 @@ describe('App', () => {
       ],
     });
 
-    render(<App />);
+    renderApp();
 
     fireEvent.change(screen.getByRole('searchbox', { name: /buscar notas/i }), {
       target: { value: 'alp' },
@@ -123,7 +131,7 @@ describe('App', () => {
       ],
     });
 
-    render(<App />);
+    renderApp();
 
     fireEvent.change(screen.getByRole('searchbox', { name: /buscar notas/i }), {
       target: { value: 'alp' },
@@ -144,7 +152,7 @@ describe('App', () => {
       error: 'server error',
     });
 
-    render(<App />);
+    renderApp();
 
     expect(screen.getByText(/error al cargar notas: server error/i)).toBeInTheDocument();
   });
