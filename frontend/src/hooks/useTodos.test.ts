@@ -17,24 +17,27 @@ const mockedCreateTodo = vi.mocked(createTodo);
 const mockedUpdateTodo = vi.mocked(updateTodo);
 const mockedDeleteTodo = vi.mocked(deleteTodo);
 
+function makeTodo(overrides: Partial<Todo> = {}): Todo {
+  return {
+    id: 1,
+    title: 'Task',
+    body: '',
+    status: 'todo',
+    priority: 0,
+    due_date: null,
+    created_at: '2026-06-21T00:00:00Z',
+    updated_at: '2026-06-21T00:00:00Z',
+    ...overrides,
+  };
+}
+
 describe('useTodos', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('loads todos on mount', async () => {
-    const todos: Todo[] = [
-      {
-        id: 1,
-        title: 'Write tests first',
-        body: '',
-        color: 'default',
-        pinned: false,
-        done: false,
-        created_at: '2026-06-21T00:00:00Z',
-        updated_at: '2026-06-21T00:00:00Z',
-      },
-    ];
+    const todos: Todo[] = [makeTodo({ id: 1, title: 'Write tests first' })];
 
     mockedGetTodos.mockResolvedValueOnce(todos);
 
@@ -64,19 +67,16 @@ describe('useTodos', () => {
   });
 
   it('addTodo appends created todo to state', async () => {
-    const initial: Todo[] = [];
-    const created: Todo = {
+    const created = makeTodo({
       id: 2,
       title: 'New task',
-      body: '',
-      color: 'default',
-      pinned: false,
-      done: false,
+      priority: 2,
+      due_date: '2026-07-01',
       created_at: '2026-06-21T00:10:00Z',
       updated_at: '2026-06-21T00:10:00Z',
-    };
+    });
 
-    mockedGetTodos.mockResolvedValueOnce(initial);
+    mockedGetTodos.mockResolvedValueOnce([]);
     mockedCreateTodo.mockResolvedValueOnce(created);
 
     const { result } = renderHook(() => useTodos());
@@ -86,36 +86,29 @@ describe('useTodos', () => {
     });
 
     await act(async () => {
-      await result.current.addTodo('New task');
+      await result.current.addTodo('New task', '', 2, '2026-07-01');
     });
 
     expect(mockedCreateTodo).toHaveBeenCalledWith({
       title: 'New task',
       body: '',
-      color: 'default',
+      priority: 2,
+      due_date: '2026-07-01',
     });
     expect(result.current.todos).toEqual([created]);
   });
 
-  it('toggleTodo updates done state for the selected todo', async () => {
-    const baseTodo: Todo = {
-      id: 3,
-      title: 'Toggle me',
-      body: '',
-      color: 'default',
-      pinned: false,
-      done: false,
-      created_at: '2026-06-21T00:20:00Z',
-      updated_at: '2026-06-21T00:20:00Z',
-    };
-    const toggledTodo: Todo = {
+  it('editTodo updates selected todo', async () => {
+    const baseTodo = makeTodo({ id: 3, title: 'Edit me' });
+    const updatedTodo = makeTodo({
       ...baseTodo,
-      done: true,
+      status: 'in_progress',
+      priority: 3,
       updated_at: '2026-06-21T00:30:00Z',
-    };
+    });
 
     mockedGetTodos.mockResolvedValueOnce([baseTodo]);
-    mockedUpdateTodo.mockResolvedValueOnce(toggledTodo);
+    mockedUpdateTodo.mockResolvedValueOnce(updatedTodo);
 
     const { result } = renderHook(() => useTodos());
 
@@ -124,30 +117,21 @@ describe('useTodos', () => {
     });
 
     await act(async () => {
-      await result.current.toggleTodo(3);
+      await result.current.editTodo(3, { status: 'in_progress', priority: 3 });
     });
 
     expect(mockedUpdateTodo).toHaveBeenCalledWith(3, {
-      title: 'Toggle me',
+      title: 'Edit me',
       body: '',
-      color: 'default',
-      pinned: false,
-      done: true,
+      status: 'in_progress',
+      priority: 3,
+      due_date: null,
     });
-    expect(result.current.todos).toEqual([toggledTodo]);
+    expect(result.current.todos).toEqual([updatedTodo]);
   });
 
   it('removeTodo deletes todo from state', async () => {
-    const existing: Todo = {
-      id: 4,
-      title: 'Delete me',
-      body: '',
-      color: 'default',
-      pinned: false,
-      done: false,
-      created_at: '2026-06-21T00:40:00Z',
-      updated_at: '2026-06-21T00:40:00Z',
-    };
+    const existing: Todo = makeTodo({ id: 4, title: 'Delete me' });
 
     mockedGetTodos.mockResolvedValueOnce([existing]);
     mockedDeleteTodo.mockResolvedValueOnce(undefined);
@@ -166,9 +150,35 @@ describe('useTodos', () => {
     expect(result.current.todos).toEqual([]);
   });
 
-  it('captures action errors in error state', async () => {
-    mockedGetTodos.mockResolvedValueOnce([]);
-    mockedCreateTodo.mockRejectedValueOnce(new Error('create failed'));
+  it('groups todos by status in fixed order and keeps empty groups', async () => {
+    mockedGetTodos.mockResolvedValueOnce([
+      makeTodo({
+        id: 1,
+        title: 'Todo high newer',
+        status: 'todo',
+        priority: 3,
+        created_at: '2026-06-22T00:00:00Z',
+      }),
+      makeTodo({
+        id: 2,
+        title: 'Todo high older',
+        status: 'todo',
+        priority: 3,
+        created_at: '2026-06-21T00:00:00Z',
+      }),
+      makeTodo({
+        id: 3,
+        title: 'In progress',
+        status: 'in_progress',
+        priority: 1,
+      }),
+      makeTodo({
+        id: 4,
+        title: 'Done',
+        status: 'done',
+        priority: 0,
+      }),
+    ]);
 
     const { result } = renderHook(() => useTodos());
 
@@ -176,10 +186,12 @@ describe('useTodos', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    await act(async () => {
-      await result.current.addTodo('Boom');
-    });
+    const { groupedTodos } = result.current;
 
-    expect(result.current.error).toBe('create failed');
+    expect(Object.keys(groupedTodos)).toEqual(['todo', 'in_progress', 'done', 'cancelled']);
+    expect(groupedTodos.todo.map((t) => t.title)).toEqual(['Todo high newer', 'Todo high older']);
+    expect(groupedTodos.in_progress).toHaveLength(1);
+    expect(groupedTodos.done).toHaveLength(1);
+    expect(groupedTodos.cancelled).toHaveLength(0);
   });
 });

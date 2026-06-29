@@ -1,23 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
-import type { Todo } from '../types/todo';
+import type { Todo, TodoStatus } from '../types/todo';
+
+interface GroupedTodos {
+  todo: Todo[];
+  in_progress: Todo[];
+  done: Todo[];
+  cancelled: Todo[];
+}
 
 interface UseTodosReturn {
   todos: Todo[];
+  groupedTodos: GroupedTodos;
   loading: boolean;
   error: string | null;
-  addTodo: (title: string, body?: string, color?: string) => Promise<void>;
-  editTodo: (
-    id: number,
-    changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>,
-  ) => Promise<void>;
-  toggleTodo: (id: number) => Promise<void>;
-  togglePin: (id: number) => Promise<void>;
+  addTodo: (title: string, body?: string, priority?: 0 | 1 | 2 | 3, dueDate?: string | null) => Promise<void>;
+  editTodo: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
 }
 
+const STATUS_ORDER: TodoStatus[] = ['todo', 'in_progress', 'done', 'cancelled'];
+
 function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error';
+}
+
+function sortGroup(a: Todo, b: Todo): number {
+  if (a.priority !== b.priority) {
+    return b.priority - a.priority;
+  }
+
+  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+}
+
+function emptyGroups(): GroupedTodos {
+  return {
+    todo: [],
+    in_progress: [],
+    done: [],
+    cancelled: [],
+  };
 }
 
 export function useTodos(): UseTodosReturn {
@@ -52,20 +74,17 @@ export function useTodos(): UseTodosReturn {
     };
   }, []);
 
-  const addTodo = async (title: string, body = '', color = 'default') => {
+  const addTodo = async (title: string, body = '', priority: 0 | 1 | 2 | 3 = 0, dueDate: string | null = null) => {
     try {
       setError(null);
-      const created = await createTodo({ title, body, color });
+      const created = await createTodo({ title, body, priority, due_date: dueDate });
       setTodos((current) => [...current, created]);
     } catch (err) {
       setError(toMessage(err));
     }
   };
 
-  const editTodo = async (
-    id: number,
-    changes: Partial<Pick<Todo, 'title' | 'body' | 'color' | 'pinned' | 'done'>>,
-  ) => {
+  const editTodo = async (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>) => {
     const currentTodo = todos.find((todo) => todo.id === id);
     if (!currentTodo) return;
 
@@ -75,30 +94,14 @@ export function useTodos(): UseTodosReturn {
       const updated = await updateTodo(id, {
         title: merged.title,
         body: merged.body,
-        color: merged.color,
-        pinned: merged.pinned,
-        done: merged.done,
+        status: merged.status,
+        priority: merged.priority,
+        due_date: merged.due_date,
       });
-      setTodos((current) =>
-        current
-          .map((todo) => (todo.id === id ? updated : todo))
-          .sort((a, b) => Number(b.pinned) - Number(a.pinned)),
-      );
+      setTodos((current) => current.map((todo) => (todo.id === id ? updated : todo)));
     } catch (err) {
       setError(toMessage(err));
     }
-  };
-
-  const toggleTodo = async (id: number) => {
-    const currentTodo = todos.find((todo) => todo.id === id);
-    if (!currentTodo) return;
-    await editTodo(id, { done: !currentTodo.done });
-  };
-
-  const togglePin = async (id: number) => {
-    const currentTodo = todos.find((todo) => todo.id === id);
-    if (!currentTodo) return;
-    await editTodo(id, { pinned: !currentTodo.pinned });
   };
 
   const removeTodo = async (id: number) => {
@@ -111,5 +114,19 @@ export function useTodos(): UseTodosReturn {
     }
   };
 
-  return { todos, loading, error, addTodo, editTodo, toggleTodo, togglePin, removeTodo };
+  const groupedTodos = useMemo(() => {
+    const groups = emptyGroups();
+
+    for (const todo of todos) {
+      groups[todo.status].push(todo);
+    }
+
+    for (const status of STATUS_ORDER) {
+      groups[status].sort(sortGroup);
+    }
+
+    return groups;
+  }, [todos]);
+
+  return { todos, groupedTodos, loading, error, addTodo, editTodo, removeTodo };
 }

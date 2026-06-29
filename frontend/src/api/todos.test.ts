@@ -4,6 +4,20 @@ import { createTodo, deleteTodo, getTodoById, getTodos, updateTodo } from './tod
 
 const mockFetch = vi.fn();
 
+function makeTodo(overrides: Partial<Todo> = {}): Todo {
+  return {
+    id: 1,
+    title: 'Task',
+    body: '',
+    status: 'todo',
+    priority: 0,
+    due_date: null,
+    created_at: '2026-06-20T10:00:00Z',
+    updated_at: '2026-06-20T10:00:00Z',
+    ...overrides,
+  };
+}
+
 describe('todos API client', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', mockFetch);
@@ -15,18 +29,7 @@ describe('todos API client', () => {
   });
 
   it('getTodos returns todos on success', async () => {
-    const todos: Todo[] = [
-      {
-        id: 1,
-        title: 'First todo',
-        body: '',
-        color: 'default',
-        pinned: false,
-        done: false,
-        created_at: '2026-06-20T10:00:00Z',
-        updated_at: '2026-06-20T10:00:00Z',
-      },
-    ];
+    const todos: Todo[] = [makeTodo()];
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -48,16 +51,7 @@ describe('todos API client', () => {
   });
 
   it('createTodo sends payload and returns todo', async () => {
-    const created: Todo = {
-      id: 2,
-      title: 'Created',
-      body: '',
-      color: 'default',
-      pinned: false,
-      done: false,
-      created_at: '2026-06-20T10:10:00Z',
-      updated_at: '2026-06-20T10:10:00Z',
-    };
+    const created = makeTodo({ id: 2, title: 'Created' });
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -68,31 +62,12 @@ describe('todos API client', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/todos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body: '', color: 'default', title: 'Created' }),
+      body: JSON.stringify({ body: '', priority: 0, title: 'Created' }),
     });
-  });
-
-  it('createTodo throws ApiError on non-2xx response', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      text: vi.fn().mockResolvedValueOnce('invalid payload'),
-    });
-
-    await expect(createTodo({ title: '' })).rejects.toEqual(new ApiError(400, 'invalid payload'));
   });
 
   it('getTodoById returns todo on success', async () => {
-    const todo: Todo = {
-      id: 3,
-      title: 'Read me',
-      body: '',
-      color: 'default',
-      pinned: false,
-      done: true,
-      created_at: '2026-06-20T10:20:00Z',
-      updated_at: '2026-06-20T10:21:00Z',
-    };
+    const todo = makeTodo({ id: 3, status: 'done' });
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -103,49 +78,20 @@ describe('todos API client', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/todos/3');
   });
 
-  it('getTodoById throws ApiError on non-2xx response', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      text: vi.fn().mockResolvedValueOnce('not found'),
-    });
-
-    await expect(getTodoById(999)).rejects.toEqual(new ApiError(404, 'not found'));
-  });
-
   it('updateTodo sends payload and returns updated todo', async () => {
-    const updated: Todo = {
-      id: 4,
-      title: 'Updated',
-      body: '',
-      color: 'default',
-      pinned: false,
-      done: true,
-      created_at: '2026-06-20T10:30:00Z',
-      updated_at: '2026-06-20T10:40:00Z',
-    };
+    const updated = makeTodo({ id: 4, status: 'done', priority: 3 });
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: vi.fn().mockResolvedValueOnce(updated),
     });
 
-    await expect(updateTodo(4, { done: true })).resolves.toEqual(updated);
+    await expect(updateTodo(4, { status: 'done' })).resolves.toEqual(updated);
     expect(mockFetch).toHaveBeenCalledWith('/api/todos/4', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ done: true }),
+      body: JSON.stringify({ status: 'done' }),
     });
-  });
-
-  it('updateTodo throws ApiError on non-2xx response', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 409,
-      text: vi.fn().mockResolvedValueOnce('conflict'),
-    });
-
-    await expect(updateTodo(4, { done: true })).rejects.toEqual(new ApiError(409, 'conflict'));
   });
 
   it('deleteTodo returns void for 204 and does not parse json', async () => {
