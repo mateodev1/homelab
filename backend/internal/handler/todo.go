@@ -10,16 +10,17 @@ import (
 	"time"
 
 	"github.com/mateo/homelab/backend/internal/domain"
+	"github.com/mateo/homelab/backend/internal/service"
 )
 
 // TodoServicer is the service interface the handler depends on.
 // Defined here to satisfy the dependency-inversion principle —
 // the handler package owns the interface it needs.
 type TodoServicer interface {
-	CreateTodo(ctx context.Context, title, body, color string, createdAt time.Time) (*domain.Todo, error)
-	ListTodos(ctx context.Context, done *bool) ([]*domain.Todo, error)
+	CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, createdAt time.Time) (*domain.Todo, error)
+	ListTodos(ctx context.Context) ([]*domain.Todo, error)
 	GetTodo(ctx context.Context, id int64) (*domain.Todo, error)
-	UpdateTodo(ctx context.Context, id int64, title, body, color string, pinned, done bool) (*domain.Todo, error)
+	UpdateTodo(ctx context.Context, id int64, patch service.TodoPatch) (*domain.Todo, error)
 	DeleteTodo(ctx context.Context, id int64) error
 }
 
@@ -67,17 +68,7 @@ func (h *TodoHandler) item(w http.ResponseWriter, r *http.Request) {
 
 // ListTodos handles GET /api/todos.
 func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
-	var done *bool
-	if raw := r.URL.Query().Get("done"); raw != "" {
-		parsed, err := strconv.ParseBool(raw)
-		if err != nil {
-			jsonError(w, "invalid done param", http.StatusBadRequest)
-			return
-		}
-		done = &parsed
-	}
-
-	todos, err := h.svc.ListTodos(r.Context(), done)
+	todos, err := h.svc.ListTodos(r.Context())
 	if err != nil {
 		jsonError(w, "failed to list todos", http.StatusInternalServerError)
 		return
@@ -93,9 +84,10 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 // CreateTodo handles POST /api/todos.
 func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Title string `json:"title"`
-		Body  string `json:"body"`
-		Color string `json:"color"`
+		Title    string  `json:"title"`
+		Body     string  `json:"body"`
+		Priority int     `json:"priority"`
+		DueDate  *string `json:"due_date"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -105,8 +97,12 @@ func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "title is required", http.StatusBadRequest)
 		return
 	}
+	if req.Priority < 0 || req.Priority > 3 {
+		jsonError(w, "priority must be between 0 and 3", http.StatusBadRequest)
+		return
+	}
 
-	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Color, time.Now())
+	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Priority, req.DueDate, time.Now())
 	if err != nil {
 		jsonError(w, "failed to create todo", http.StatusInternalServerError)
 		return
@@ -146,22 +142,36 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Title  string `json:"title"`
-		Body   string `json:"body"`
-		Color  string `json:"color"`
-		Pinned bool   `json:"pinned"`
-		Done   bool   `json:"done"`
+		Title    *string `json:"title"`
+		Body     *string `json:"body"`
+		Status   *string `json:"status"`
+		Priority *int    `json:"priority"`
+		DueDate  **string `json:"due_date"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	if strings.TrimSpace(req.Title) == "" {
+	if req.Title != nil && strings.TrimSpace(*req.Title) == "" {
 		jsonError(w, "title is required", http.StatusBadRequest)
 		return
 	}
+	if req.Status != nil && !domain.ValidStatuses[*req.Status] {
+		jsonError(w, "status must be one of: todo, in_progress, done, cancelled", http.StatusBadRequest)
+		return
+	}
+	if req.Priority != nil && (*req.Priority < 0 || *req.Priority > 3) {
+		jsonError(w, "priority must be between 0 and 3", http.StatusBadRequest)
+		return
+	}
 
-	todo, err := h.svc.UpdateTodo(r.Context(), id, req.Title, req.Body, req.Color, req.Pinned, req.Done)
+	todo, err := h.svc.UpdateTodo(r.Context(), id, service.TodoPatch{
+		Title:    req.Title,
+		Body:     req.Body,
+		Status:   req.Status,
+		Priority: req.Priority,
+		DueDate:  req.DueDate,
+	})
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			jsonError(w, "not found", http.StatusNotFound)
@@ -207,9 +217,9 @@ func todoResponse(t *domain.Todo) map[string]any {
 		"id":         t.ID,
 		"title":      t.Title,
 		"body":       t.Body,
-		"color":      t.Color,
-		"pinned":     t.Pinned,
-		"done":       t.Done,
+		"status":     t.Status,
+		"priority":   t.Priority,
+		"due_date":   t.DueDate,
 		"created_at": t.CreatedAt.Format(time.RFC3339),
 		"updated_at": t.UpdatedAt.Format(time.RFC3339),
 	}
