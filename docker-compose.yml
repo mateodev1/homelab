@@ -28,6 +28,8 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    env_file:
+      - .env
     environment:
       - VITE_API_URL=http://backend:8080
 

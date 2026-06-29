@@ -26,6 +26,16 @@ tasks:
       - pnpm --dir frontend test --run
       - pnpm --dir frontend run lint
 
+  web:dev:
+    desc: "Start the TanStack web app in dev mode (port 3000)"
+    cmds:
+      - pnpm --dir web dev
+
+  test:web:
+    desc: "Run web (TanStack) tests"
+    cmds:
+      - pnpm --dir web test
+
   build:
     desc: "Build all binaries"
     cmds:
