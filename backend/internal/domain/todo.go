@@ -8,14 +8,28 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
+const (
+	TodoStatusTodo       = "todo"
+	TodoStatusInProgress = "in_progress"
+	TodoStatusDone       = "done"
+	TodoStatusCancelled  = "cancelled"
+)
+
+var ValidStatuses = map[string]bool{
+	TodoStatusTodo:       true,
+	TodoStatusInProgress: true,
+	TodoStatusDone:       true,
+	TodoStatusCancelled:  true,
+}
+
 // Todo represents a single to-do item.
 type Todo struct {
 	ID        int64
 	Title     string
 	Body      string
-	Color     string
-	Pinned    bool
-	Done      bool
+	Status    string
+	Priority  int
+	DueDate   *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
