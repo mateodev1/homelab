@@ -198,15 +198,6 @@ func postTodo(t *testing.T, url, title string) map[string]any {
 	return body
 }
 
-func mustJSONStatus(t *testing.T, method, url string, payload map[string]any, want int) {
-	t.Helper()
-	res := mustJSONRequest(t, method, url, payload)
-	defer func() { _ = res.Body.Close() }()
-	if res.StatusCode != want {
-		t.Fatalf("%s %s expected %d, got %d", method, url, want, res.StatusCode)
-	}
-}
-
 func mustJSONRequest(t *testing.T, method, url string, payload map[string]any) *http.Response {
 	t.Helper()
 	body, err := json.Marshal(payload)

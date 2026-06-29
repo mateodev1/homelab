@@ -1,0 +1,51 @@
+:root {
+  --status-todo: #6b7280;
+  --status-in-progress: #3b82f6;
+  --status-done: #10b981;
+  --status-cancelled: #ef4444;
+
+  --priority-none: #6b7280;
+  --priority-low: #84cc16;
+  --priority-medium: #f59e0b;
+  --priority-high: #ef4444;
+}
+
+.task-chip {
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  text-transform: capitalize;
+  color: #fff;
+}
+
+.task-chip--status-todo {
+  background: var(--status-todo);
+}
+
+.task-chip--status-in_progress {
+  background: var(--status-in-progress);
+}
+
+.task-chip--status-done {
+  background: var(--status-done);
+}
+
+.task-chip--status-cancelled {
+  background: var(--status-cancelled);
+}
+
+.task-chip--priority-0 {
+  background: var(--priority-none);
+}
+
+.task-chip--priority-1 {
+  background: var(--priority-low);
+}
+
+.task-chip--priority-2 {
+  background: var(--priority-medium);
+}
+
+.task-chip--priority-3 {
+  background: var(--priority-high);
+}
