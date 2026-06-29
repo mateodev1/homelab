@@ -12,17 +12,28 @@
     "coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "generate-routes": "tsr generate"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.19.0",
+    "@tanstack/react-router": "^1.170.16",
+    "@tanstack/router-plugin": "^1.168.18",
+    "@uiw/react-md-editor": "^4.1.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild"]
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "esbuild"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@tanstack/router-cli": "^1.167.17",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
