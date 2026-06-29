@@ -8,8 +8,16 @@ const MDEditor = lazy(async () => {
 
 interface TaskFormProps {
   todo: Todo | null;
-  onCreate: (title: string, body?: string, priority?: 0 | 1 | 2 | 3, dueDate?: string | null) => Promise<void>;
-  onUpdate: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>) => Promise<void>;
+  onCreate: (
+    title: string,
+    body?: string,
+    priority?: 0 | 1 | 2 | 3,
+    dueDate?: string | null,
+  ) => Promise<void>;
+  onUpdate: (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>,
+  ) => Promise<void>;
   onCancelEdit: () => void;
 }
 
@@ -80,7 +88,10 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
       <div className="task-form__row">
         <label className="task-form__label">
           Priority
-          <select value={priority} onChange={(event) => setPriority(Number(event.target.value) as 0 | 1 | 2 | 3)}>
+          <select
+            value={priority}
+            onChange={(event) => setPriority(Number(event.target.value) as 0 | 1 | 2 | 3)}
+          >
             <option value={0}>None</option>
             <option value={1}>Low</option>
             <option value={2}>Medium</option>
@@ -104,9 +115,24 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
         </label>
       </div>
 
-      <Suspense fallback={<textarea className="task-form__fallback" value={body} onChange={(event) => setBody(event.target.value)} rows={8} />}>
+      <Suspense
+        fallback={
+          <textarea
+            className="task-form__fallback"
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            rows={8}
+          />
+        }
+      >
         <div data-color-mode="light">
-          <MDEditor value={body} onChange={(value) => setBody(value ?? '')} preview="edit" height={240} textareaProps={{ placeholder: 'Write markdown...' }} />
+          <MDEditor
+            value={body}
+            onChange={(value) => setBody(value ?? '')}
+            preview="edit"
+            height={240}
+            textareaProps={{ placeholder: 'Write markdown...' }}
+          />
         </div>
       </Suspense>
 

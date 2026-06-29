@@ -50,12 +50,18 @@ export function TaskRow({ todo, onSelect, onDelete }: TaskRowProps) {
         <header className="task-row__header">
           <h3 className="task-row__title">{todo.title}</h3>
           <div className="task-row__chips">
-            <span className={`task-chip task-chip--status-${todo.status}`}>{todo.status.replace('_', ' ')}</span>
-            <span className={`task-chip task-chip--priority-${todo.priority}`}>{priorityLabel(todo.priority)}</span>
+            <span className={`task-chip task-chip--status-${todo.status}`}>
+              {todo.status.replace('_', ' ')}
+            </span>
+            <span className={`task-chip task-chip--priority-${todo.priority}`}>
+              {priorityLabel(todo.priority)}
+            </span>
           </div>
         </header>
 
-        {todo.due_date ? <p className="task-row__due-date">Due {formatRelativeDate(todo.due_date)}</p> : null}
+        {todo.due_date ? (
+          <p className="task-row__due-date">Due {formatRelativeDate(todo.due_date)}</p>
+        ) : null}
 
         {preview ? (
           <div className="task-row__preview">
@@ -66,7 +72,12 @@ export function TaskRow({ todo, onSelect, onDelete }: TaskRowProps) {
         )}
       </button>
 
-      <button type="button" className="task-row__delete" onClick={() => onDelete(todo.id)} aria-label={`Delete ${todo.title}`}>
+      <button
+        type="button"
+        className="task-row__delete"
+        onClick={() => onDelete(todo.id)}
+        aria-label={`Delete ${todo.title}`}
+      >
         Delete
       </button>
     </article>

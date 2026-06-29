@@ -14,8 +14,16 @@ interface UseTodosReturn {
   groupedTodos: GroupedTodos;
   loading: boolean;
   error: string | null;
-  addTodo: (title: string, body?: string, priority?: 0 | 1 | 2 | 3, dueDate?: string | null) => Promise<void>;
-  editTodo: (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>) => Promise<void>;
+  addTodo: (
+    title: string,
+    body?: string,
+    priority?: 0 | 1 | 2 | 3,
+    dueDate?: string | null,
+  ) => Promise<void>;
+  editTodo: (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>,
+  ) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
 }
 
@@ -74,7 +82,12 @@ export function useTodos(): UseTodosReturn {
     };
   }, []);
 
-  const addTodo = async (title: string, body = '', priority: 0 | 1 | 2 | 3 = 0, dueDate: string | null = null) => {
+  const addTodo = async (
+    title: string,
+    body = '',
+    priority: 0 | 1 | 2 | 3 = 0,
+    dueDate: string | null = null,
+  ) => {
     try {
       setError(null);
       const created = await createTodo({ title, body, priority, due_date: dueDate });
@@ -84,7 +97,10 @@ export function useTodos(): UseTodosReturn {
     }
   };
 
-  const editTodo = async (id: number, changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>) => {
+  const editTodo = async (
+    id: number,
+    changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>,
+  ) => {
     const currentTodo = todos.find((todo) => todo.id === id);
     if (!currentTodo) return;
 

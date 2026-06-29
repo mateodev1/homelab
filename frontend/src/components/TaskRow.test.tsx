@@ -28,14 +28,22 @@ describe('TaskRow', () => {
   });
 
   it('renders status and priority badges', () => {
-    render(<TaskRow todo={makeTodo({ status: 'in_progress', priority: 3 })} onSelect={vi.fn()} onDelete={vi.fn()} />);
+    render(
+      <TaskRow
+        todo={makeTodo({ status: 'in_progress', priority: 3 })}
+        onSelect={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('in progress')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
   });
 
   it('renders due date as relative text and hides it when null', () => {
-    const { rerender } = render(<TaskRow todo={makeTodo()} onSelect={vi.fn()} onDelete={vi.fn()} />);
+    const { rerender } = render(
+      <TaskRow todo={makeTodo()} onSelect={vi.fn()} onDelete={vi.fn()} />,
+    );
 
     expect(screen.getByText('Due in 2 days')).toBeInTheDocument();
 

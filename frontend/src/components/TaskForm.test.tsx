@@ -38,7 +38,9 @@ describe('TaskForm', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('markdown-editor')).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByLabelText('markdown-editor'), { target: { value: '# Markdown body' } });
+    fireEvent.change(screen.getByLabelText('markdown-editor'), {
+      target: { value: '# Markdown body' },
+    });
 
     fireEvent.change(screen.getByLabelText('Priority'), {
       target: { value: '3' },
@@ -58,9 +60,18 @@ describe('TaskForm', () => {
     const onUpdate = vi.fn().mockResolvedValue(undefined);
     const onCancelEdit = vi.fn();
 
-    render(<TaskForm todo={makeTodo()} onCreate={vi.fn()} onUpdate={onUpdate} onCancelEdit={onCancelEdit} />);
+    render(
+      <TaskForm
+        todo={makeTodo()}
+        onCreate={vi.fn()}
+        onUpdate={onUpdate}
+        onCancelEdit={onCancelEdit}
+      />,
+    );
 
-    fireEvent.change(screen.getByPlaceholderText('Task title'), { target: { value: 'Updated title' } });
+    fireEvent.change(screen.getByPlaceholderText('Task title'), {
+      target: { value: 'Updated title' },
+    });
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'done' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Update task' }));

@@ -1,5 +1,5 @@
-import { createRoot } from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
+import { createRoot } from 'react-dom/client';
 import { routeTree } from './routeTree.gen';
 import './styles/global.css';
 
@@ -20,6 +20,4 @@ if (!rootElement) {
 // StrictMode removed: Auth0 authorization codes are single-use.
 // In dev, StrictMode runs effects twice which causes the second
 // code exchange attempt to fail with access_denied.
-createRoot(rootElement).render(
-  <RouterProvider router={router} />,
-);
+createRoot(rootElement).render(<RouterProvider router={router} />);

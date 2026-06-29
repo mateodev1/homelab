@@ -27,17 +27,39 @@ const emptyGrouped = {
 describe('TaskList', () => {
   it('renders loading and error states', () => {
     const { rerender } = render(
-      <TaskList groupedTodos={emptyGrouped} loading={true} error={null} onSelectTask={vi.fn()} onDeleteTask={vi.fn()} />,
+      <TaskList
+        groupedTodos={emptyGrouped}
+        loading={true}
+        error={null}
+        onSelectTask={vi.fn()}
+        onDeleteTask={vi.fn()}
+      />,
     );
 
     expect(screen.getByLabelText('Loading tasks')).toBeInTheDocument();
 
-    rerender(<TaskList groupedTodos={emptyGrouped} loading={false} error="boom" onSelectTask={vi.fn()} onDeleteTask={vi.fn()} />);
+    rerender(
+      <TaskList
+        groupedTodos={emptyGrouped}
+        loading={false}
+        error="boom"
+        onSelectTask={vi.fn()}
+        onDeleteTask={vi.fn()}
+      />,
+    );
     expect(screen.getByText('Failed to load tasks: boom')).toBeInTheDocument();
   });
 
   it('always renders every section and shows No tasks when empty', () => {
-    render(<TaskList groupedTodos={emptyGrouped} loading={false} error={null} onSelectTask={vi.fn()} onDeleteTask={vi.fn()} />);
+    render(
+      <TaskList
+        groupedTodos={emptyGrouped}
+        loading={false}
+        error={null}
+        onSelectTask={vi.fn()}
+        onDeleteTask={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('Todo')).toBeInTheDocument();
     expect(screen.getByText('In Progress')).toBeInTheDocument();
@@ -64,7 +86,9 @@ describe('TaskList', () => {
       />,
     );
 
-    fireEvent.click(within(screen.getByTestId('task-row-1')).getByRole('button', { name: /^todo task/i }));
+    fireEvent.click(
+      within(screen.getByTestId('task-row-1')).getByRole('button', { name: /^todo task/i }),
+    );
 
     expect(screen.getByText('Doing task')).toBeInTheDocument();
     expect(screen.getByText('Done task')).toBeInTheDocument();

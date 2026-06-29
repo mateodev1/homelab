@@ -23,7 +23,13 @@ const STATUS_SECTIONS: Array<{ key: keyof GroupedTodos; label: string }> = [
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
-export function TaskList({ groupedTodos, loading, error, onSelectTask, onDeleteTask }: TaskListProps) {
+export function TaskList({
+  groupedTodos,
+  loading,
+  error,
+  onSelectTask,
+  onDeleteTask,
+}: TaskListProps) {
   if (loading) {
     return (
       <div className="task-list__status">
@@ -53,7 +59,12 @@ export function TaskList({ groupedTodos, loading, error, onSelectTask, onDeleteT
             ) : (
               <div className="task-list__rows">
                 {tasks.map((todo) => (
-                  <TaskRow key={todo.id} todo={todo} onSelect={onSelectTask} onDelete={onDeleteTask} />
+                  <TaskRow
+                    key={todo.id}
+                    todo={todo}
+                    onSelect={onSelectTask}
+                    onDelete={onDeleteTask}
+                  />
                 ))}
               </div>
             )}

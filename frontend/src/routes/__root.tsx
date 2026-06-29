@@ -1,5 +1,5 @@
-import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { Auth0Provider } from '@auth0/auth0-react';
+import { Outlet, createRootRoute, useRouter } from '@tanstack/react-router';
 import { ThemeProvider } from '../context/ThemeContext';
 
 export const Route = createRootRoute({

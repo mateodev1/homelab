@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { TaskForm } from './components/TaskForm';
-import { TaskList } from './components/TaskList';
+import { useState } from 'react';
 import { LoginButton } from './components/LoginButton';
 import { LogoutButton } from './components/LogoutButton';
+import { TaskForm } from './components/TaskForm';
+import { TaskList } from './components/TaskList';
 import { useTheme } from './context/ThemeContext';
 import { useTodos } from './hooks/useTodos';
 
@@ -21,7 +21,8 @@ function App() {
     cancelled: groupedTodos.cancelled.filter(matchesQuery(query)),
   };
 
-  const editingTodo = editingTodoID == null ? null : todos.find((todo) => todo.id === editingTodoID) ?? null;
+  const editingTodo =
+    editingTodoID == null ? null : (todos.find((todo) => todo.id === editingTodoID) ?? null);
 
   return (
     <div className="app">
@@ -41,7 +42,12 @@ function App() {
             aria-label="Search tasks"
           />
           {query && (
-            <button type="button" className="app-header__search-clear" onClick={() => setQuery('')} aria-label="Clear search">
+            <button
+              type="button"
+              className="app-header__search-clear"
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+            >
               ✕
             </button>
           )}
@@ -60,7 +66,13 @@ function App() {
               <img
                 src={user.picture}
                 alt={user.name ?? 'User'}
-                style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--color-border)' }}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '1px solid var(--color-border)',
+                }}
               />
             )}
             <LogoutButton />
@@ -101,7 +113,9 @@ function matchesQuery(query: string) {
       return true;
     }
 
-    return todo.title.toLowerCase().includes(normalized) || todo.body.toLowerCase().includes(normalized);
+    return (
+      todo.title.toLowerCase().includes(normalized) || todo.body.toLowerCase().includes(normalized)
+    );
   };
 }
 
