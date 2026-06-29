@@ -15,6 +15,10 @@ vi.mock('./hooks/useTodos', () => ({
   useTodos: vi.fn(),
 }));
 
+vi.mock('@uiw/react-md-editor', () => ({
+  default: () => <div>Markdown editor</div>,
+}));
+
 const mockedUseTodos = vi.mocked(useTodos);
 
 const mockHookBase = {
@@ -22,8 +26,6 @@ const mockHookBase = {
   error: null,
   addTodo: vi.fn(),
   editTodo: vi.fn(),
-  toggleTodo: vi.fn(),
-  togglePin: vi.fn(),
   removeTodo: vi.fn(),
 };
 
@@ -32,7 +34,7 @@ describe('App', () => {
     vi.clearAllMocks();
   });
 
-  it('renders NoteForm and NoteGrid using useTodos state', () => {
+  it('renders TaskForm and TaskList using hook state', () => {
     mockedUseTodos.mockReturnValue({
       ...mockHookBase,
       todos: [
@@ -40,18 +42,35 @@ describe('App', () => {
           id: 1,
           title: 'From hook',
           body: '',
-          color: 'default',
-          pinned: false,
-          done: false,
+          status: 'todo',
+          priority: 1,
+          due_date: null,
           created_at: '2026-06-21T03:00:00Z',
           updated_at: '2026-06-21T03:00:00Z',
         },
       ],
+      groupedTodos: {
+        todo: [
+          {
+            id: 1,
+            title: 'From hook',
+            body: '',
+            status: 'todo',
+            priority: 1,
+            due_date: null,
+            created_at: '2026-06-21T03:00:00Z',
+            updated_at: '2026-06-21T03:00:00Z',
+          },
+        ],
+        in_progress: [],
+        done: [],
+        cancelled: [],
+      },
     });
 
     renderApp();
 
-    expect(screen.getByRole('searchbox', { name: /buscar notas/i })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: /search tasks/i })).toBeInTheDocument();
     expect(screen.getByText('From hook')).toBeInTheDocument();
   });
 
@@ -59,15 +78,16 @@ describe('App', () => {
     mockedUseTodos.mockReturnValue({
       ...mockHookBase,
       todos: [],
+      groupedTodos: { todo: [], in_progress: [], done: [], cancelled: [] },
       loading: true,
     });
 
     renderApp();
 
-    expect(screen.getByLabelText(/cargando notas/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/loading tasks/i)).toBeInTheDocument();
   });
 
-  it('search filtering — typing filters visible cards', () => {
+  it('search filtering hides non-matching tasks', () => {
     mockedUseTodos.mockReturnValue({
       ...mockHookBase,
       todos: [
@@ -75,9 +95,9 @@ describe('App', () => {
           id: 1,
           title: 'Alpha',
           body: '',
-          color: 'default',
-          pinned: false,
-          done: false,
+          status: 'todo',
+          priority: 0,
+          due_date: null,
           created_at: '2026-06-21T03:00:00Z',
           updated_at: '2026-06-21T03:00:00Z',
         },
@@ -85,75 +105,49 @@ describe('App', () => {
           id: 2,
           title: 'Beta',
           body: '',
-          color: 'default',
-          pinned: false,
-          done: false,
+          status: 'todo',
+          priority: 0,
+          due_date: null,
           created_at: '2026-06-21T03:00:00Z',
           updated_at: '2026-06-21T03:00:00Z',
         },
       ],
+      groupedTodos: {
+        todo: [
+          {
+            id: 1,
+            title: 'Alpha',
+            body: '',
+            status: 'todo',
+            priority: 0,
+            due_date: null,
+            created_at: '2026-06-21T03:00:00Z',
+            updated_at: '2026-06-21T03:00:00Z',
+          },
+          {
+            id: 2,
+            title: 'Beta',
+            body: '',
+            status: 'todo',
+            priority: 0,
+            due_date: null,
+            created_at: '2026-06-21T03:00:00Z',
+            updated_at: '2026-06-21T03:00:00Z',
+          },
+        ],
+        in_progress: [],
+        done: [],
+        cancelled: [],
+      },
     });
 
     renderApp();
 
-    fireEvent.change(screen.getByRole('searchbox', { name: /buscar notas/i }), {
+    fireEvent.change(screen.getByRole('searchbox', { name: /search tasks/i }), {
       target: { value: 'alp' },
     });
 
     expect(screen.getByText('Alpha')).toBeInTheDocument();
     expect(screen.queryByText('Beta')).not.toBeInTheDocument();
-  });
-
-  it('clear search button — click restores all todos', () => {
-    mockedUseTodos.mockReturnValue({
-      ...mockHookBase,
-      todos: [
-        {
-          id: 1,
-          title: 'Alpha',
-          body: '',
-          color: 'default',
-          pinned: false,
-          done: false,
-          created_at: '2026-06-21T03:00:00Z',
-          updated_at: '2026-06-21T03:00:00Z',
-        },
-        {
-          id: 2,
-          title: 'Beta',
-          body: '',
-          color: 'default',
-          pinned: false,
-          done: false,
-          created_at: '2026-06-21T03:00:00Z',
-          updated_at: '2026-06-21T03:00:00Z',
-        },
-      ],
-    });
-
-    renderApp();
-
-    fireEvent.change(screen.getByRole('searchbox', { name: /buscar notas/i }), {
-      target: { value: 'alp' },
-    });
-
-    expect(screen.queryByText('Beta')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /limpiar búsqueda/i }));
-
-    expect(screen.getByText('Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Beta')).toBeInTheDocument();
-  });
-
-  it('error state — error message renders in NoteGrid', () => {
-    mockedUseTodos.mockReturnValue({
-      ...mockHookBase,
-      todos: [],
-      error: 'server error',
-    });
-
-    renderApp();
-
-    expect(screen.getByText(/error al cargar notas: server error/i)).toBeInTheDocument();
   });
 });

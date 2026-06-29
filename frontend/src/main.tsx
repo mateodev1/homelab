@@ -1,8 +1,15 @@
-import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider } from './context/ThemeContext';
+import { RouterProvider, createRouter } from '@tanstack/react-router';
+import { routeTree } from './routeTree.gen';
 import './styles/global.css';
-import App from './App';
+
+const router = createRouter({ routeTree });
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
+}
 
 const rootElement = document.getElementById('root');
 
@@ -10,10 +17,9 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
+// StrictMode removed: Auth0 authorization codes are single-use.
+// In dev, StrictMode runs effects twice which causes the second
+// code exchange attempt to fail with access_denied.
 createRoot(rootElement).render(
-  <StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </StrictMode>,
+  <RouterProvider router={router} />,
 );
