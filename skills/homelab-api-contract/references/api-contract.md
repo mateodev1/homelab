@@ -11,28 +11,29 @@ Verified against code on 2026-07-08 (`backend/internal/handler/todo.go`,
 
 - `backend/cmd/api/main.go` wires: `store.New(db)` → `service.NewTodoService(store)` → `handler.NewTodoHandler(svc)`.
 - Routing uses stdlib `http.ServeMux` — no third-party router.
-- Middleware chain (outer to inner): `RecoveryMiddleware(LoggingMiddleware(CORSMiddleware(protected)))`, where `protected` is `APIKeyMiddleware(apiKey, mux)` when `ENV=production`, or just `mux` otherwise.
+- Middleware chain (outer to inner): `RecoveryMiddleware(LoggingMiddleware(CORSMiddleware(protected)))`, where `protected` is `handler.AuthMiddleware(apiKeyForAuth, validator, mux)` — always wired, regardless of `ENV`.
 - `CORSMiddleware` sets `Access-Control-Allow-Origin: *` and allows `GET, POST, PUT, DELETE, OPTIONS`. No auth-related headers or checks.
 - Persistence: SQLite via `modernc.org/sqlite` (pure-Go driver, registered with blank import in `main.go`). DB path from `DB_PATH` env var (default `/data/homelab.db`).
 
 ## Authorization model — IMPORTANT
 
-**The Go backend enforces a single, global API key in production.**
-`backend/internal/handler/middleware.go` defines `APIKeyMiddleware(apiKey, next)`:
-- Requires header `Authorization: Bearer <API_KEY>` on every request.
-- Exempts `OPTIONS` (CORS preflight) and `GET /api/health` — these never require the key.
-- Returns `401 {"error": "unauthorized"}` on missing/incorrect key.
+**The Go backend always enforces authorization; two credential types are accepted in parallel.**
+`backend/internal/handler/middleware.go` defines `AuthMiddleware(apiKey, validator, next)`:
+- Requires header `Authorization: Bearer <token>` on every request.
+- Exempts `OPTIONS` (CORS preflight) and `GET /api/health` — these never require a credential.
+- Accepts EITHER an exact match against `apiKey` (M2M client credential, see below) OR a JWT validated by `validator` (Auth0 access token: RS256 signature verified against JWKS, `iss`, `aud`, `exp`).
+- Returns `401 {"error": "unauthorized"}` if neither matches.
 
 Wiring (`backend/cmd/api/main.go`):
-- `API_KEY` is read from the environment (populated from the root `.env` via `env_file` in `docker-compose.yml` / Task's `dotenv`).
-- If `ENV=production` and `API_KEY` is empty, the process **fails fast** (`log.Fatalf`) at startup.
-- The middleware is only added to the chain when `ENV=production`. In development (`ENV=development` or unset), all `/api/*` routes are open, matching the pre-existing behavior.
+- `AUTH0_DOMAIN` and `AUTH0_AUDIENCE` are read from the environment and are **always required** (dev and prod) — the process `log.Fatalf`s at startup if either is missing. `handler.NewJWTValidator` builds a `keyfunc.Keyfunc` against `https://${AUTH0_DOMAIN}/.well-known/jwks.json` (background refresh/rotation via `github.com/MicahParks/keyfunc/v3` + `github.com/golang-jwt/jwt/v5`).
+- `API_KEY` is read from the environment too. If `ENV=production` and it's empty, the process fails fast (unchanged from before). The `apiKey` value passed into `AuthMiddleware` is only non-empty when `ENV=production` — in any other environment the API_KEY path is effectively disabled, only JWTs work.
+- `AuthMiddleware` is **always** added to the chain, regardless of `ENV` (no more "open in dev" mode — the JWT path is always live).
 
-Auth0 (`@auth0/auth0-react`) is used **only** in the frontend, and is a separate, unrelated
-mechanism from the API key:
-- `frontend/src/routes/__root.tsx` wraps the app in `<Auth0Provider>` with `VITE_AUTH0_DOMAIN` / `VITE_AUTH0_CLIENT_ID`.
+Auth0 (`@auth0/auth0-react`) is used **only** in the frontend for login, but the backend now
+validates the resulting access tokens directly:
+- `frontend/src/routes/__root.tsx` wraps the app in `<Auth0Provider>` with `VITE_AUTH0_DOMAIN` / `VITE_AUTH0_CLIENT_ID`. **`audience` is not yet configured in `authorizationParams`** — until it is, `getAccessTokenSilently()` won't return an API-scoped JWT that the backend's `aud` check will accept.
 - `frontend/src/routes/_authenticated.tsx` is a route-level gate: if `!isAuthenticated`, it renders a login prompt instead of `<Outlet />`. This blocks UI navigation only.
-- `frontend/src/api/todos.ts` calls `fetch('/api/todos', ...)` with **no `Authorization` header** and no access token retrieval (`getAccessTokenSilently` is not used). This means the frontend does **not** currently send the API key — it will get `401`s if pointed at a production backend until it's updated to send `Authorization: Bearer <API_KEY>`.
+- `frontend/src/api/todos.ts` calls `fetch('/api/todos', ...)` with **no `Authorization` header** and no access token retrieval. Combined with the two points above, the frontend cannot successfully call the API yet — this is tracked as separate, not-yet-implemented frontend work (add `audience` to `Auth0Provider`, attach `Authorization: Bearer <token>` in `todos.ts`).
 
 Production frontend URL: `https://todos.matdev.site` (per Auth0 SPA redirect config).
 
@@ -127,20 +128,16 @@ Errors: `{"error": "message"}` with appropriate HTTP status (400, 404, 405, 500)
 - `updateTodo(id, payload)` → `PUT /api/todos/{id}`
 - `deleteTodo(id)` → `DELETE /api/todos/{id}`, expects 204
 
-**How the SPA reaches the protected API in production**: the frontend JS never sends the
-`Authorization` header itself (the API key is never baked into the JS bundle). Instead,
-in prod (`docker/frontend.Dockerfile`, stage `prod`) nginx serves the static build and
-reverse-proxies `/api/` to the backend, injecting the header server-side:
-- `docker/nginx.conf.template` uses `nginx:alpine`'s built-in envsubst-on-templates
-  entrypoint (`/etc/nginx/templates/*.template` → `/etc/nginx/conf.d/*`) to render
-  `proxy_set_header Authorization "Bearer ${API_KEY}";` from the container's `API_KEY`
-  env var at container startup (not at build time).
-- The `frontend` container in the production deployment must receive `API_KEY` (same
-  value as the backend's) as a runtime env var. This is configured outside this repo, in
-  the compose file used by the self-hosted deploy runner.
-- In dev, `frontend/vite.config.ts`'s own proxy (`/api` → `http://backend:8080`) is used
-  instead, and the backend doesn't enforce the key when `ENV=development`, so no header
-  is needed.
+**How the SPA reaches the protected API**: `docker/nginx.conf.template` reverse-proxies
+`/api/` to the backend transparently (`proxy_pass http://backend:8080;` plus `Host`/
+`X-Real-IP` only) — it does **not** inject any `Authorization` header. Whatever the
+browser sends is what the backend sees. Since `frontend/src/api/todos.ts` sends no
+`Authorization` header today, and `Auth0Provider` has no `audience` configured, the SPA
+currently gets `401` from every `/api/todos*` call against this backend (dev and prod
+alike, per the always-on `AuthMiddleware`) until the frontend-side work described above
+is done. In dev, `frontend/vite.config.ts`'s own proxy (`/api` → `http://backend:8080`)
+is used instead of nginx, but the same `401` applies since the backend enforces auth
+regardless of `ENV`.
 
 Types live in `frontend/src/types/todo.ts` (`Todo`, `CreateTodoPayload`, `UpdateTodoPayload`, `ApiError`).
 

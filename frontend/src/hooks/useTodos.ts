@@ -1,3 +1,4 @@
+import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
 import type { Todo, TodoStatus } from '../types/todo';
@@ -51,6 +52,7 @@ function emptyGroups(): GroupedTodos {
 }
 
 export function useTodos(): UseTodosReturn {
+  const { getAccessTokenSilently } = useAuth0();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,8 @@ export function useTodos(): UseTodosReturn {
     const loadTodos = async () => {
       try {
         setError(null);
-        const data = await getTodos(controller.signal);
+        const token = await getAccessTokenSilently();
+        const data = await getTodos(token, controller.signal);
         setTodos(data);
       } catch (err) {
         if (controller.signal.aborted) {
@@ -80,7 +83,7 @@ export function useTodos(): UseTodosReturn {
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [getAccessTokenSilently]);
 
   const addTodo = async (
     title: string,
@@ -90,7 +93,8 @@ export function useTodos(): UseTodosReturn {
   ) => {
     try {
       setError(null);
-      const created = await createTodo({ title, body, priority, due_date: dueDate });
+      const token = await getAccessTokenSilently();
+      const created = await createTodo(token, { title, body, priority, due_date: dueDate });
       setTodos((current) => [...current, created]);
     } catch (err) {
       setError(toMessage(err));
@@ -107,7 +111,8 @@ export function useTodos(): UseTodosReturn {
     try {
       setError(null);
       const merged = { ...currentTodo, ...changes };
-      const updated = await updateTodo(id, {
+      const token = await getAccessTokenSilently();
+      const updated = await updateTodo(token, id, {
         title: merged.title,
         body: merged.body,
         status: merged.status,
@@ -123,7 +128,8 @@ export function useTodos(): UseTodosReturn {
   const removeTodo = async (id: number) => {
     try {
       setError(null);
-      await deleteTodo(id);
+      const token = await getAccessTokenSilently();
+      await deleteTodo(token, id);
       setTodos((current) => current.filter((todo) => todo.id !== id));
     } catch (err) {
       setError(toMessage(err));

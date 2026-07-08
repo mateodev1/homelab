@@ -61,8 +61,8 @@ func TestRecoveryMiddleware_Panic(t *testing.T) {
 	}
 }
 
-func TestAPIKeyMiddleware_MissingHeader_Unauthorized(t *testing.T) {
-	h := APIKeyMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+func TestAuthMiddleware_MissingHeader_Unauthorized(t *testing.T) {
+	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -76,8 +76,8 @@ func TestAPIKeyMiddleware_MissingHeader_Unauthorized(t *testing.T) {
 	}
 }
 
-func TestAPIKeyMiddleware_WrongKey_Unauthorized(t *testing.T) {
-	h := APIKeyMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+func TestAuthMiddleware_WrongAPIKey_Unauthorized(t *testing.T) {
+	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -92,9 +92,9 @@ func TestAPIKeyMiddleware_WrongKey_Unauthorized(t *testing.T) {
 	}
 }
 
-func TestAPIKeyMiddleware_CorrectKey_PassesThrough(t *testing.T) {
+func TestAuthMiddleware_CorrectAPIKey_PassesThrough(t *testing.T) {
 	called := false
-	h := APIKeyMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -112,9 +112,27 @@ func TestAPIKeyMiddleware_CorrectKey_PassesThrough(t *testing.T) {
 	}
 }
 
-func TestAPIKeyMiddleware_HealthExempt(t *testing.T) {
+func TestAuthMiddleware_EmptyAPIKey_NeverAccepted(t *testing.T) {
+	// apiKey == "" simulates a non-production environment: even an
+	// Authorization header equal to the literal empty string must not pass.
+	h := AuthMiddleware("", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Fatal("next handler should not be called")
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/todos", nil)
+	req.Header.Set("Authorization", "Bearer ")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestAuthMiddleware_HealthExempt(t *testing.T) {
 	called := false
-	h := APIKeyMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -131,9 +149,9 @@ func TestAPIKeyMiddleware_HealthExempt(t *testing.T) {
 	}
 }
 
-func TestAPIKeyMiddleware_OptionsExempt(t *testing.T) {
+func TestAuthMiddleware_OptionsExempt(t *testing.T) {
 	called := false
-	h := APIKeyMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))

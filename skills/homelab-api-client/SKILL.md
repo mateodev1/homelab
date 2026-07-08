@@ -14,7 +14,7 @@ Use this skill when writing code that connects to the homeLab Todo API as an ext
 ## Hard Rules
 
 - Configure the client with exactly two environment variables: `API_BASE_URL` (e.g. `https://homelab.example.com`) and `API_KEY`.
-- Send `Authorization: Bearer <API_KEY>` on every request. **Enforced by the server when `ENV=production`.** In development (`ENV=development` or unset) the server accepts unauthenticated requests, but sending the header is still recommended so the client works unchanged against production. `/api/health` never requires the key.
+- Send `Authorization: Bearer <API_KEY>` on every request. `API_KEY` is a real machine-to-machine (M2M) client credential — not a "dev only" placeholder. The server always enforces authorization (Auth0 JWT or `API_KEY`, never open), but the `API_KEY` path specifically is only accepted when the server is running with `ENV=production`; against a non-production deployment it will be rejected and only a valid Auth0 JWT works. `/api/health` never requires any credential.
 - All request/response bodies are JSON. Set `Content-Type: application/json` on requests with a body.
 - `priority` is an integer `0-3`. `status` is one of `todo | in_progress | done | cancelled`.
 - Full endpoint shapes live in `references/endpoints.md` — read it before implementing calls.
@@ -25,7 +25,8 @@ Use this skill when writing code that connects to the homeLab Todo API as an ext
 | Situation | Action |
 | --- | --- |
 | Building a new client (any language) | Read `references/endpoints.md`, implement all 5 endpoints, use env vars for config |
-| Talking to a production deployment | Header is required — requests without it get `401 {"error": "unauthorized"}` |
+| Talking to a production deployment | `API_KEY` header works — requests without it (or with a wrong value) get `401 {"error": "unauthorized"}` |
+| Talking to a non-production deployment | `API_KEY` is rejected — a valid Auth0 JWT is required instead |
 | Unsure of a field name or enum value | Check `references/endpoints.md`, do not guess |
 
 ## Execution Steps

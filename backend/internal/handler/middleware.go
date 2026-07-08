@@ -42,10 +42,20 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// APIKeyMiddleware requires a valid "Authorization: Bearer <apiKey>" header on
-// every request except OPTIONS preflight and /api/health. Intended to be
-// wired only when running in production (see cmd/api/main.go).
-func APIKeyMiddleware(apiKey string, next http.Handler) http.Handler {
+// AuthMiddleware requires a valid "Authorization: Bearer <token>" header on
+// every request except OPTIONS preflight and /api/health. Two credential
+// types are accepted in parallel:
+//
+//  1. An exact match against apiKey — a static M2M client credential. Callers
+//     (cmd/api/main.go) should only pass a non-empty apiKey when it's meant to
+//     be accepted (currently: only when ENV=production).
+//  2. A JWT validated by validator (Auth0 access token: RS256 signature via
+//     JWKS, issuer, audience, expiry) — always checked, for real users via
+//     the frontend.
+//
+// The middleware itself is always wired; it's always active regardless of
+// ENV, only the apiKey acceptance is env-gated by the caller.
+func AuthMiddleware(apiKey string, validator *JWTValidator, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions || r.URL.Path == "/api/health" {
 			next.ServeHTTP(w, r)
@@ -54,13 +64,27 @@ func APIKeyMiddleware(apiKey string, next http.Handler) http.Handler {
 
 		const prefix = "Bearer "
 		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, prefix) || strings.TrimPrefix(auth, prefix) != apiKey {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		if !strings.HasPrefix(auth, prefix) {
+			unauthorized(w)
+			return
+		}
+		token := strings.TrimPrefix(auth, prefix)
+
+		if apiKey != "" && token == apiKey {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if validator.Valid(token) {
+			next.ServeHTTP(w, r)
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		unauthorized(w)
 	})
+}
+
+func unauthorized(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusUnauthorized)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
 }

@@ -28,9 +28,24 @@ func main() {
 	dbPath := envOr("DB_PATH", "/data/homelab.db")
 	env := envOr("ENV", "development")
 	apiKey := os.Getenv("API_KEY")
+	auth0Domain := os.Getenv("AUTH0_DOMAIN")
+	auth0Audience := os.Getenv("AUTH0_AUDIENCE")
 
 	if env == "production" && apiKey == "" {
 		log.Fatalf("API_KEY must be set when ENV=production")
+	}
+	if auth0Domain == "" || auth0Audience == "" {
+		log.Fatalf("AUTH0_DOMAIN and AUTH0_AUDIENCE must always be set")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	issuer := "https://" + auth0Domain + "/"
+	jwksURL := issuer + ".well-known/jwks.json"
+	validator, err := handler.NewJWTValidator(ctx, jwksURL, issuer, auth0Audience)
+	if err != nil {
+		log.Fatalf("handler.NewJWTValidator: %v", err)
 	}
 
 	db, err := sql.Open("sqlite", dbPath)
@@ -54,10 +69,11 @@ func main() {
 	todoHandler.Register(mux)
 	healthHandler.Register(mux)
 
-	var protected http.Handler = mux
+	apiKeyForAuth := ""
 	if env == "production" {
-		protected = handler.APIKeyMiddleware(apiKey, mux)
+		apiKeyForAuth = apiKey
 	}
+	protected := handler.AuthMiddleware(apiKeyForAuth, validator, mux)
 	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(protected)))
 
 	addr := ":" + port

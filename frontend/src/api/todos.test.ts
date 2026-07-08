@@ -36,8 +36,11 @@ describe('todos API client', () => {
       json: vi.fn().mockResolvedValueOnce(todos),
     });
 
-    await expect(getTodos()).resolves.toEqual(todos);
-    expect(mockFetch).toHaveBeenCalledWith('/api/todos');
+    await expect(getTodos('test-token')).resolves.toEqual(todos);
+    expect(mockFetch).toHaveBeenCalledWith('/api/todos', {
+      headers: { Authorization: 'Bearer test-token' },
+      signal: undefined,
+    });
   });
 
   it('getTodos throws ApiError on non-2xx response', async () => {
@@ -47,10 +50,10 @@ describe('todos API client', () => {
       text: vi.fn().mockResolvedValueOnce('boom'),
     });
 
-    await expect(getTodos()).rejects.toEqual(new ApiError(500, 'boom'));
+    await expect(getTodos('test-token')).rejects.toEqual(new ApiError(500, 'boom'));
   });
 
-  it('createTodo sends payload and returns todo', async () => {
+  it('createTodo sends payload, token and returns todo', async () => {
     const created = makeTodo({ id: 2, title: 'Created' });
 
     mockFetch.mockResolvedValueOnce({
@@ -58,10 +61,10 @@ describe('todos API client', () => {
       json: vi.fn().mockResolvedValueOnce(created),
     });
 
-    await expect(createTodo({ title: 'Created' })).resolves.toEqual(created);
+    await expect(createTodo('test-token', { title: 'Created' })).resolves.toEqual(created);
     expect(mockFetch).toHaveBeenCalledWith('/api/todos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: '', priority: 0, title: 'Created' }),
     });
   });
@@ -74,11 +77,13 @@ describe('todos API client', () => {
       json: vi.fn().mockResolvedValueOnce(todo),
     });
 
-    await expect(getTodoById(3)).resolves.toEqual(todo);
-    expect(mockFetch).toHaveBeenCalledWith('/api/todos/3');
+    await expect(getTodoById('test-token', 3)).resolves.toEqual(todo);
+    expect(mockFetch).toHaveBeenCalledWith('/api/todos/3', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
   });
 
-  it('updateTodo sends payload and returns updated todo', async () => {
+  it('updateTodo sends payload, token and returns updated todo', async () => {
     const updated = makeTodo({ id: 4, status: 'done', priority: 3 });
 
     mockFetch.mockResolvedValueOnce({
@@ -86,10 +91,10 @@ describe('todos API client', () => {
       json: vi.fn().mockResolvedValueOnce(updated),
     });
 
-    await expect(updateTodo(4, { status: 'done' })).resolves.toEqual(updated);
+    await expect(updateTodo('test-token', 4, { status: 'done' })).resolves.toEqual(updated);
     expect(mockFetch).toHaveBeenCalledWith('/api/todos/4', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'done' }),
     });
   });
@@ -103,8 +108,11 @@ describe('todos API client', () => {
       json: jsonSpy,
     });
 
-    await expect(deleteTodo(5)).resolves.toBeUndefined();
-    expect(mockFetch).toHaveBeenCalledWith('/api/todos/5', { method: 'DELETE' });
+    await expect(deleteTodo('test-token', 5)).resolves.toBeUndefined();
+    expect(mockFetch).toHaveBeenCalledWith('/api/todos/5', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    });
     expect(jsonSpy).not.toHaveBeenCalled();
   });
 
@@ -115,6 +123,6 @@ describe('todos API client', () => {
       text: vi.fn().mockResolvedValueOnce('delete failed'),
     });
 
-    await expect(deleteTodo(5)).rejects.toEqual(new ApiError(500, 'delete failed'));
+    await expect(deleteTodo('test-token', 5)).rejects.toEqual(new ApiError(500, 'delete failed'));
   });
 });

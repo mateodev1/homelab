@@ -14,7 +14,10 @@ function RootLayout() {
       <Auth0Provider
         domain={import.meta.env.VITE_AUTH0_DOMAIN ?? ''}
         clientId={import.meta.env.VITE_AUTH0_CLIENT_ID ?? ''}
-        authorizationParams={{ redirect_uri: window.location.origin }}
+        authorizationParams={{
+          redirect_uri: window.location.origin,
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+        }}
         onRedirectCallback={(appState) => {
           // Navigate AFTER Auth0 finishes processing the callback —
           // this avoids the race condition where isAuthenticated is still false

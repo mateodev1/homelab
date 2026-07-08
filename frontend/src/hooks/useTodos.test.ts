@@ -10,6 +10,12 @@ vi.mock('../api/todos', () => ({
   deleteTodo: vi.fn(),
 }));
 
+const mockedGetAccessTokenSilently = vi.fn();
+
+vi.mock('@auth0/auth0-react', () => ({
+  useAuth0: () => ({ getAccessTokenSilently: mockedGetAccessTokenSilently }),
+}));
+
 import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
 
 const mockedGetTodos = vi.mocked(getTodos);
@@ -34,6 +40,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
 describe('useTodos', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGetAccessTokenSilently.mockResolvedValue('test-token');
   });
 
   it('loads todos on mount', async () => {
@@ -89,7 +96,7 @@ describe('useTodos', () => {
       await result.current.addTodo('New task', '', 2, '2026-07-01');
     });
 
-    expect(mockedCreateTodo).toHaveBeenCalledWith({
+    expect(mockedCreateTodo).toHaveBeenCalledWith('test-token', {
       title: 'New task',
       body: '',
       priority: 2,
@@ -120,7 +127,7 @@ describe('useTodos', () => {
       await result.current.editTodo(3, { status: 'in_progress', priority: 3 });
     });
 
-    expect(mockedUpdateTodo).toHaveBeenCalledWith(3, {
+    expect(mockedUpdateTodo).toHaveBeenCalledWith('test-token', 3, {
       title: 'Edit me',
       body: '',
       status: 'in_progress',
@@ -146,8 +153,21 @@ describe('useTodos', () => {
       await result.current.removeTodo(4);
     });
 
-    expect(mockedDeleteTodo).toHaveBeenCalledWith(4);
+    expect(mockedDeleteTodo).toHaveBeenCalledWith('test-token', 4);
     expect(result.current.todos).toEqual([]);
+  });
+
+  it('sets error state when getAccessTokenSilently fails on initial load', async () => {
+    mockedGetAccessTokenSilently.mockRejectedValueOnce(new Error('login_required'));
+
+    const { result } = renderHook(() => useTodos());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe('login_required');
+    expect(mockedGetTodos).not.toHaveBeenCalled();
   });
 
   it('groups todos by status in fixed order and keeps empty groups', async () => {
