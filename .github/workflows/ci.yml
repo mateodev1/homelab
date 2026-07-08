@@ -147,6 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     needs: [test-go, test-frontend, lint-go, lint-frontend]
+    environment: homelab
     permissions:
       contents: read
       packages: write

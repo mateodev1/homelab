@@ -33,6 +33,8 @@ ARG VITE_AUTH0_CLIENT_ID
 ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN
 ENV VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID
 
+RUN test -n "$VITE_AUTH0_DOMAIN" && test -n "$VITE_AUTH0_CLIENT_ID" || (echo "VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID build args are required" >&2; exit 1)
+
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/ .
