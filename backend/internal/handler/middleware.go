@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -37,5 +39,28 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		sw := &statusResponseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(sw, r)
 		log.Printf("%s %s %d %s", r.Method, r.URL.Path, sw.status, time.Since(start))
+	})
+}
+
+// APIKeyMiddleware requires a valid "Authorization: Bearer <apiKey>" header on
+// every request except OPTIONS preflight and /api/health. Intended to be
+// wired only when running in production (see cmd/api/main.go).
+func APIKeyMiddleware(apiKey string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions || r.URL.Path == "/api/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		const prefix = "Bearer "
+		auth := r.Header.Get("Authorization")
+		if !strings.HasPrefix(auth, prefix) || strings.TrimPrefix(auth, prefix) != apiKey {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+			return
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }

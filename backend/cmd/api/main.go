@@ -26,6 +26,12 @@ func (c sqlHealthChecker) Ping(ctx context.Context) error {
 func main() {
 	port := envOr("PORT", "8080")
 	dbPath := envOr("DB_PATH", "/data/homelab.db")
+	env := envOr("ENV", "development")
+	apiKey := os.Getenv("API_KEY")
+
+	if env == "production" && apiKey == "" {
+		log.Fatalf("API_KEY must be set when ENV=production")
+	}
 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -47,10 +53,15 @@ func main() {
 	mux := http.NewServeMux()
 	todoHandler.Register(mux)
 	healthHandler.Register(mux)
-	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(mux)))
+
+	var protected http.Handler = mux
+	if env == "production" {
+		protected = handler.APIKeyMiddleware(apiKey, mux)
+	}
+	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(protected)))
 
 	addr := ":" + port
-	log.Printf("backend listening on %s (db: %s)", addr, dbPath)
+	log.Printf("backend listening on %s (db: %s, env: %s)", addr, dbPath, env)
 	if err := http.ListenAndServe(addr, chain); err != nil {
 		log.Fatalf("ListenAndServe: %v", err)
 	}

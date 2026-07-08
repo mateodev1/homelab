@@ -2,6 +2,8 @@
 
 A personal homelab management system built as a Go + React monorepo.
 
+Repository: https://github.com/mateodev1/homelab.git
+
 ## Architecture
 
 ```
@@ -91,6 +93,20 @@ task docker:build
 # Start all services
 docker compose up
 ```
+
+## Installing the API Client Skill Standalone
+
+To use the `homelab-api-client` skill in another environment without cloning the
+whole monorepo:
+
+```bash
+git clone --depth 1 --filter=blob:none --sparse https://github.com/mateodev1/homelab.git
+cd homelab
+git sparse-checkout set skills/homelab-api-client
+```
+
+This pulls only `skills/homelab-api-client/` — no backend, frontend, or other
+project files.
 
 ## Contributing
 
