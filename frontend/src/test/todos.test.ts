@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, type Todo } from '../types/todo';
 import { createTodo, deleteTodo, getTodoById, getTodos, updateTodo } from '../api/todos';
+import { ApiError, type Todo } from '../types/todo';
 
 const mockFetch = vi.fn();
 

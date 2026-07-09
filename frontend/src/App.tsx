@@ -1,107 +1,160 @@
-import { useAuth0 } from '@auth0/auth0-react';
-import { CheckSquare, Moon, Sun, X } from 'lucide-react';
-import { useState } from 'react';
-import { LoginButton } from './components/LoginButton';
-import { LogoutButton } from './components/LogoutButton';
+import { X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Sidebar, type TaskView, VIEWS } from './components/Sidebar';
 import { TaskForm } from './components/TaskForm';
 import { TaskList } from './components/TaskList';
-import { Avatar, AvatarImage } from './components/ui/avatar';
 import { Button } from './components/ui/button';
+import { Dialog, DialogContent } from './components/ui/dialog';
 import { Input } from './components/ui/input';
-import { useTheme } from './context/ThemeContext';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useTodos } from './hooks/useTodos';
 
 function App() {
   const { todos, groupedTodos, loading, error, addTodo, editTodo, removeTodo } = useTodos();
   const [query, setQuery] = useState('');
+  const [activeView, setActiveView] = useState<TaskView>('all');
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTodoID, setEditingTodoID] = useState<number | null>(null);
-  const { theme, toggle } = useTheme();
-  const { isAuthenticated, user } = useAuth0();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredGroupedTodos = {
-    todo: groupedTodos.todo.filter(matchesQuery(query)),
-    in_progress: groupedTodos.in_progress.filter(matchesQuery(query)),
-    done: groupedTodos.done.filter(matchesQuery(query)),
-    cancelled: groupedTodos.cancelled.filter(matchesQuery(query)),
+  const viewTasks = useMemo(() => {
+    if (activeView === 'all') {
+      return [
+        ...groupedTodos.todo,
+        ...groupedTodos.in_progress,
+        ...groupedTodos.done,
+        ...groupedTodos.cancelled,
+      ];
+    }
+    return groupedTodos[activeView];
+  }, [activeView, groupedTodos]);
+
+  const filteredTasks = useMemo(() => viewTasks.filter(matchesQuery(query)), [viewTasks, query]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset the active row when the view or search query changes
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [activeView, query]);
+
+  const counts: Record<TaskView, number> = {
+    all: todos.length,
+    todo: groupedTodos.todo.length,
+    in_progress: groupedTodos.in_progress.length,
+    done: groupedTodos.done.length,
+    cancelled: groupedTodos.cancelled.length,
   };
 
   const editingTodo =
     editingTodoID == null ? null : (todos.find((todo) => todo.id === editingTodoID) ?? null);
 
+  const viewTitle = VIEWS.find((view) => view.key === activeView)?.label ?? 'All';
+
+  const openCreate = () => {
+    setEditingTodoID(null);
+    setDialogOpen(true);
+  };
+
+  const openEditForActive = () => {
+    const task = filteredTasks[activeIndex];
+    if (!task) return;
+    setEditingTodoID(task.id);
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingTodoID(null);
+  };
+
+  const moveActive = (delta: number) => {
+    setActiveIndex((current) => {
+      if (filteredTasks.length === 0) return 0;
+      return Math.max(0, Math.min(filteredTasks.length - 1, current + delta));
+    });
+  };
+
+  useKeyboardShortcuts({
+    onCreate: () => !dialogOpen && openCreate(),
+    onSearch: () => !dialogOpen && searchInputRef.current?.focus(),
+    onMoveDown: () => !dialogOpen && moveActive(1),
+    onMoveUp: () => !dialogOpen && moveActive(-1),
+    onOpen: () => !dialogOpen && openEditForActive(),
+    onClose: () => dialogOpen && closeDialog(),
+  });
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-background px-4">
-        <div className="flex shrink-0 items-center gap-2">
-          <CheckSquare aria-hidden="true" className="size-5 text-foreground" />
-          <span className="text-base font-medium tracking-tight text-foreground">Tasks</span>
-        </div>
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar
+        activeView={activeView}
+        onSelectView={setActiveView}
+        counts={counts}
+        onCreateTask={openCreate}
+      />
 
-        <div className="relative flex-1 max-w-xl">
-          <Input
-            type="search"
-            placeholder="Search tasks"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label="Search tasks"
-            className="pl-3 pr-8"
-          />
-          {query && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setQuery('')}
-              aria-label="Clear search"
-              className="absolute right-0.5 top-0.5 h-8 w-8"
-            >
-              <X aria-hidden="true" className="size-4" />
-            </Button>
-          )}
-        </div>
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <header className="flex h-12 shrink-0 items-center gap-4 border-b border-border px-4">
+          <h1 className="shrink-0 text-sm font-semibold text-foreground">
+            {viewTitle}
+            <span className="ml-1.5 font-normal text-muted-foreground">{filteredTasks.length}</span>
+          </h1>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={toggle}
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-        </Button>
-
-        {isAuthenticated ? (
-          <>
-            {user?.picture && (
-              <Avatar>
-                <AvatarImage src={user.picture} alt={user.name ?? 'User'} />
-              </Avatar>
+          <div className="relative max-w-xs flex-1">
+            <Input
+              ref={searchInputRef}
+              type="search"
+              placeholder="Search tasks"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search tasks"
+              className="h-7 pl-3 pr-8 text-sm"
+            />
+            {query && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
+                className="absolute right-0.5 top-0.5 h-6 w-6"
+              >
+                <X aria-hidden="true" className="size-3.5" />
+              </Button>
             )}
-            <LogoutButton />
-          </>
-        ) : (
-          <LoginButton />
-        )}
-      </header>
+          </div>
+        </header>
 
-      <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6">
-        <TaskForm
-          todo={editingTodo}
-          onCreate={addTodo}
-          onUpdate={async (id, changes) => {
-            await editTodo(id, changes);
-            setEditingTodoID(null);
-          }}
-          onCancelEdit={() => setEditingTodoID(null)}
-        />
-
-        <TaskList
-          groupedTodos={filteredGroupedTodos}
-          loading={loading}
-          error={error}
-          onSelectTask={(id) => setEditingTodoID(id)}
-          onDeleteTask={removeTodo}
-        />
+        <div className="flex-1 overflow-y-auto">
+          <TaskList
+            tasks={filteredTasks}
+            loading={loading}
+            error={error}
+            activeIndex={activeIndex}
+            onSelectTask={(id) => {
+              setEditingTodoID(id);
+              setDialogOpen(true);
+            }}
+            onDeleteTask={removeTodo}
+          />
+        </div>
       </main>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent label={editingTodo ? 'Edit task' : 'Create task'}>
+          <TaskForm
+            todo={editingTodo}
+            onCreate={async (title, body, priority, dueDate) => {
+              await addTodo(title, body, priority, dueDate);
+              closeDialog();
+            }}
+            onUpdate={async (id, changes) => {
+              await editTodo(id, changes);
+              closeDialog();
+            }}
+            onCancelEdit={closeDialog}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

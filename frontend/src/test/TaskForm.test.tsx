@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Todo } from '../types/todo';
 import { TaskForm } from '../components/TaskForm';
+import type { Todo } from '../types/todo';
 
 vi.mock('@uiw/react-md-editor', () => ({
   default: ({ value, onChange }: { value?: string; onChange?: (v: string) => void }) => (

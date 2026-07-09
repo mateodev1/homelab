@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Todo } from '../types/todo';
 import { TaskRow } from '../components/TaskRow';
+import type { Todo } from '../types/todo';
 
 function makeTodo(overrides: Partial<Todo> = {}): Todo {
   return {
@@ -27,7 +27,7 @@ describe('TaskRow', () => {
     vi.useRealTimers();
   });
 
-  it('renders status and priority badges', () => {
+  it('renders title and priority badge', () => {
     render(
       <TaskRow
         todo={makeTodo({ status: 'in_progress', priority: 3 })}
@@ -36,7 +36,7 @@ describe('TaskRow', () => {
       />,
     );
 
-    expect(screen.getByText('in progress')).toBeInTheDocument();
+    expect(screen.getByText('Task title')).toBeInTheDocument();
     expect(screen.getByText('High')).toBeInTheDocument();
   });
 
@@ -45,17 +45,40 @@ describe('TaskRow', () => {
       <TaskRow todo={makeTodo()} onSelect={vi.fn()} onDelete={vi.fn()} />,
     );
 
-    expect(screen.getByText('Due in 2 days')).toBeInTheDocument();
+    expect(screen.getByText('in 2 days')).toBeInTheDocument();
 
     rerender(<TaskRow todo={makeTodo({ due_date: null })} onSelect={vi.fn()} onDelete={vi.fn()} />);
-    expect(screen.queryByText(/Due/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/in \d+ days/i)).not.toBeInTheDocument();
   });
 
-  it('renders only the first markdown paragraph', () => {
-    render(<TaskRow todo={makeTodo()} onSelect={vi.fn()} onDelete={vi.fn()} />);
+  it('applies active highlight styling when active', () => {
+    const { rerender } = render(
+      <TaskRow todo={makeTodo()} active={false} onSelect={vi.fn()} onDelete={vi.fn()} />,
+    );
+    expect(screen.getByTestId('task-row-1')).not.toHaveClass('bg-accent');
 
-    expect(screen.getByText('First paragraph')).toBeInTheDocument();
-    expect(screen.queryByText('Second paragraph')).not.toBeInTheDocument();
+    rerender(<TaskRow todo={makeTodo()} active={true} onSelect={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByTestId('task-row-1')).toHaveClass('bg-accent');
+  });
+
+  it('conveys status via an accessible status icon instead of a text badge', () => {
+    render(
+      <TaskRow todo={makeTodo({ status: 'in_progress' })} onSelect={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    expect(screen.getByRole('img', { name: 'In progress' })).toBeInTheDocument();
+  });
+
+  it('does not render a body preview in the compact list row', () => {
+    render(
+      <TaskRow
+        todo={makeTodo({ body: 'First paragraph\n\nSecond paragraph' })}
+        onSelect={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/first paragraph/i)).not.toBeInTheDocument();
   });
 
   it('calls onSelect and onDelete', () => {

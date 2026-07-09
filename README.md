@@ -86,8 +86,29 @@ task lint:frontend
 
 ## Deployment
 
+Deploys are triggered by pushing a semver tag. CI builds the `prod` targets for
+`backend` and `frontend`, pushes them to GHCR, then a self-hosted runner pulls
+and restarts the stack on the homelab server.
+
 ```bash
-# Build Docker images
+# Cut a release (triggers build-and-push + deploy jobs in .github/workflows/ci.yml)
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+What the `deploy` job runs on the server (`~/homelab`):
+
+```bash
+docker login ghcr.io -u "$GHCR_USER" --password-stdin
+docker compose pull
+docker compose up -d
+docker image prune -f
+```
+
+Local/manual equivalents:
+
+```bash
+# Build Docker images locally
 task docker:build
 
 # Start all services

@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Todo } from '../types/todo';
 import { useTodos } from '../hooks/useTodos';
+import type { Todo } from '../types/todo';
 
 vi.mock('../api/todos', () => ({
   getTodos: vi.fn(),
