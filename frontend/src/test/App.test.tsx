@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import App from './App';
-import { ThemeProvider } from './context/ThemeContext';
-import { useTodos } from './hooks/useTodos';
+import App from '../App';
+import { ThemeProvider } from '../context/ThemeContext';
+import { useTodos } from '../hooks/useTodos';
 
 const renderApp = () =>
   render(
@@ -11,7 +11,7 @@ const renderApp = () =>
     </ThemeProvider>,
   );
 
-vi.mock('./hooks/useTodos', () => ({
+vi.mock('../hooks/useTodos', () => ({
   useTodos: vi.fn(),
 }));
 

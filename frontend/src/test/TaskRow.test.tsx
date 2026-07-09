@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Todo } from '../types/todo';
-import { TaskRow } from './TaskRow';
+import { TaskRow } from '../components/TaskRow';
 
 function makeTodo(overrides: Partial<Todo> = {}): Todo {
   return {
