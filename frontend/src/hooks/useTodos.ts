@@ -1,7 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useMemo, useState } from 'react';
 import { createTodo, deleteTodo, getTodos, updateTodo } from '../api/todos';
-import type { Todo, TodoStatus } from '../types/todo';
+import type { IssueType, Todo, TodoKind, TodoStatus } from '../types/todo';
 
 interface GroupedTodos {
   todo: Todo[];
@@ -20,10 +20,14 @@ interface UseTodosReturn {
     body?: string,
     priority?: 0 | 1 | 2 | 3,
     dueDate?: string | null,
+    kind?: TodoKind,
+    issueType?: IssueType | null,
   ) => Promise<void>;
   editTodo: (
     id: number,
-    changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>,
+    changes: Partial<
+      Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type'>
+    >,
   ) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
 }
@@ -90,11 +94,20 @@ export function useTodos(): UseTodosReturn {
     body = '',
     priority: 0 | 1 | 2 | 3 = 0,
     dueDate: string | null = null,
+    kind: TodoKind = 'note',
+    issueType: IssueType | null = null,
   ) => {
     try {
       setError(null);
       const token = await getAccessTokenSilently();
-      const created = await createTodo(token, { title, body, priority, due_date: dueDate });
+      const created = await createTodo(token, {
+        title,
+        body,
+        priority,
+        due_date: dueDate,
+        kind,
+        issue_type: issueType,
+      });
       setTodos((current) => [...current, created]);
     } catch (err) {
       setError(toMessage(err));
@@ -103,7 +116,9 @@ export function useTodos(): UseTodosReturn {
 
   const editTodo = async (
     id: number,
-    changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>,
+    changes: Partial<
+      Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type'>
+    >,
   ) => {
     const currentTodo = todos.find((todo) => todo.id === id);
     if (!currentTodo) return;
@@ -118,6 +133,8 @@ export function useTodos(): UseTodosReturn {
         status: merged.status,
         priority: merged.priority,
         due_date: merged.due_date,
+        kind: merged.kind,
+        issue_type: merged.issue_type,
       });
       setTodos((current) => current.map((todo) => (todo.id === id ? updated : todo)));
     } catch (err) {

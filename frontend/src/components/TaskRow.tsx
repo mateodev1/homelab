@@ -1,5 +1,16 @@
 import { cn } from '@/lib/utils';
-import { Calendar, Circle, CircleCheck, CircleDot, CircleSlash, Trash2 } from 'lucide-react';
+import {
+  Bug,
+  Calendar,
+  Circle,
+  CircleCheck,
+  CircleDot,
+  CircleSlash,
+  Lightbulb,
+  Sparkles,
+  StickyNote,
+  Trash2,
+} from 'lucide-react';
 import type { Todo } from '../types/todo';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -35,6 +46,42 @@ const PRIORITY_BADGE_VARIANT: Record<
   3: 'destructive',
 };
 
+const KIND_ICON: Record<Todo['kind'], typeof StickyNote> = {
+  note: StickyNote,
+  issue: Bug,
+};
+
+const KIND_ICON_CLASS: Record<Todo['kind'], string> = {
+  note: 'text-muted-foreground',
+  issue: 'text-orange-500',
+};
+
+const KIND_LABEL: Record<Todo['kind'], string> = {
+  note: 'Note',
+  issue: 'Issue',
+};
+
+const ISSUE_TYPE_ICON: Record<NonNullable<Todo['issue_type']>, typeof Bug> = {
+  feature: Sparkles,
+  bug: Bug,
+  improvement: Lightbulb,
+};
+
+const ISSUE_TYPE_BADGE_VARIANT: Record<
+  NonNullable<Todo['issue_type']>,
+  'muted' | 'outline' | 'secondary' | 'destructive'
+> = {
+  feature: 'secondary',
+  bug: 'destructive',
+  improvement: 'outline',
+};
+
+const ISSUE_TYPE_LABEL: Record<NonNullable<Todo['issue_type']>, string> = {
+  feature: 'Feature',
+  bug: 'Bug',
+  improvement: 'Improvement',
+};
+
 interface TaskRowProps {
   todo: Todo;
   active?: boolean;
@@ -68,6 +115,8 @@ function formatRelativeDate(dateText: string): string {
 
 export function TaskRow({ todo, active = false, onSelect, onDelete }: TaskRowProps) {
   const StatusIcon = STATUS_ICON[todo.status];
+  const KindIcon = KIND_ICON[todo.kind];
+  const IssueTypeIcon = todo.issue_type ? ISSUE_TYPE_ICON[todo.issue_type] : null;
 
   return (
     <div
@@ -83,6 +132,12 @@ export function TaskRow({ todo, active = false, onSelect, onDelete }: TaskRowPro
         className={cn('size-3.5 shrink-0', STATUS_ICON_CLASS[todo.status])}
       />
 
+      <KindIcon
+        role="img"
+        aria-label={KIND_LABEL[todo.kind]}
+        className={cn('size-3.5 shrink-0', KIND_ICON_CLASS[todo.kind])}
+      />
+
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -95,6 +150,13 @@ export function TaskRow({ todo, active = false, onSelect, onDelete }: TaskRowPro
             <Calendar aria-hidden="true" className="size-3" />
             {formatRelativeDate(todo.due_date)}
           </span>
+        ) : null}
+
+        {todo.issue_type && IssueTypeIcon ? (
+          <Badge variant={ISSUE_TYPE_BADGE_VARIANT[todo.issue_type]} className="shrink-0 gap-1">
+            <IssueTypeIcon aria-hidden="true" className="size-3" />
+            {ISSUE_TYPE_LABEL[todo.issue_type]}
+          </Badge>
         ) : null}
 
         <Badge variant={PRIORITY_BADGE_VARIANT[todo.priority]} className="shrink-0">

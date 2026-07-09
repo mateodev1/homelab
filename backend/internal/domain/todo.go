@@ -22,6 +22,28 @@ var ValidStatuses = map[string]bool{
 	TodoStatusCancelled:  true,
 }
 
+const (
+	TodoKindNote  = "note"
+	TodoKindIssue = "issue"
+)
+
+var ValidKinds = map[string]bool{
+	TodoKindNote:  true,
+	TodoKindIssue: true,
+}
+
+const (
+	IssueTypeFeature     = "feature"
+	IssueTypeBug         = "bug"
+	IssueTypeImprovement = "improvement"
+)
+
+var ValidIssueTypes = map[string]bool{
+	IssueTypeFeature:     true,
+	IssueTypeBug:         true,
+	IssueTypeImprovement: true,
+}
+
 // Todo represents a single to-do item.
 type Todo struct {
 	ID        int64
@@ -30,6 +52,8 @@ type Todo struct {
 	Status    string
 	Priority  int
 	DueDate   *string
+	Kind      string
+	IssueType *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

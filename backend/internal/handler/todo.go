@@ -17,7 +17,7 @@ import (
 // Defined here to satisfy the dependency-inversion principle —
 // the handler package owns the interface it needs.
 type TodoServicer interface {
-	CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, createdAt time.Time) (*domain.Todo, error)
+	CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, createdAt time.Time) (*domain.Todo, error)
 	ListTodos(ctx context.Context) ([]*domain.Todo, error)
 	GetTodo(ctx context.Context, id int64) (*domain.Todo, error)
 	UpdateTodo(ctx context.Context, id int64, patch service.TodoPatch) (*domain.Todo, error)
@@ -73,6 +73,28 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "failed to list todos", http.StatusInternalServerError)
 		return
 	}
+
+	kindFilter := r.URL.Query().Get("kind")
+	issueTypeFilter := r.URL.Query().Get("issue_type")
+	if kindFilter != "" {
+		filtered := make([]*domain.Todo, 0, len(todos))
+		for _, t := range todos {
+			if t.Kind == kindFilter {
+				filtered = append(filtered, t)
+			}
+		}
+		todos = filtered
+	}
+	if issueTypeFilter != "" {
+		filtered := make([]*domain.Todo, 0, len(todos))
+		for _, t := range todos {
+			if t.IssueType != nil && *t.IssueType == issueTypeFilter {
+				filtered = append(filtered, t)
+			}
+		}
+		todos = filtered
+	}
+
 	// Map through todoResponse so field names match the wire format.
 	out := make([]map[string]any, len(todos))
 	for i, t := range todos {
@@ -84,10 +106,12 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 // CreateTodo handles POST /api/todos.
 func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Title    string  `json:"title"`
-		Body     string  `json:"body"`
-		Priority int     `json:"priority"`
-		DueDate  *string `json:"due_date"`
+		Title     string  `json:"title"`
+		Body      string  `json:"body"`
+		Priority  int     `json:"priority"`
+		DueDate   *string `json:"due_date"`
+		Kind      string  `json:"kind"`
+		IssueType *string `json:"issue_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -101,8 +125,26 @@ func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "priority must be between 0 and 3", http.StatusBadRequest)
 		return
 	}
+	effectiveKind := req.Kind
+	if effectiveKind == "" {
+		effectiveKind = domain.TodoKindNote
+	}
+	if !domain.ValidKinds[effectiveKind] {
+		jsonError(w, "kind must be one of: note, issue", http.StatusBadRequest)
+		return
+	}
+	if req.IssueType != nil {
+		if effectiveKind != domain.TodoKindIssue {
+			jsonError(w, "issue_type can only be set when kind is issue", http.StatusBadRequest)
+			return
+		}
+		if !domain.ValidIssueTypes[*req.IssueType] {
+			jsonError(w, "issue_type must be one of: feature, bug, improvement", http.StatusBadRequest)
+			return
+		}
+	}
 
-	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Priority, req.DueDate, time.Now())
+	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Priority, req.DueDate, req.Kind, req.IssueType, time.Now())
 	if err != nil {
 		jsonError(w, "failed to create todo", http.StatusInternalServerError)
 		return
@@ -142,11 +184,13 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Title    *string `json:"title"`
-		Body     *string `json:"body"`
-		Status   *string `json:"status"`
-		Priority *int    `json:"priority"`
-		DueDate  **string `json:"due_date"`
+		Title     *string  `json:"title"`
+		Body      *string  `json:"body"`
+		Status    *string  `json:"status"`
+		Priority  *int     `json:"priority"`
+		DueDate   **string `json:"due_date"`
+		Kind      *string  `json:"kind"`
+		IssueType **string `json:"issue_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -164,17 +208,31 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "priority must be between 0 and 3", http.StatusBadRequest)
 		return
 	}
+	if req.Kind != nil && !domain.ValidKinds[*req.Kind] {
+		jsonError(w, "kind must be one of: note, issue", http.StatusBadRequest)
+		return
+	}
+	if req.IssueType != nil && *req.IssueType != nil && !domain.ValidIssueTypes[**req.IssueType] {
+		jsonError(w, "issue_type must be one of: feature, bug, improvement", http.StatusBadRequest)
+		return
+	}
 
 	todo, err := h.svc.UpdateTodo(r.Context(), id, service.TodoPatch{
-		Title:    req.Title,
-		Body:     req.Body,
-		Status:   req.Status,
-		Priority: req.Priority,
-		DueDate:  req.DueDate,
+		Title:     req.Title,
+		Body:      req.Body,
+		Status:    req.Status,
+		Priority:  req.Priority,
+		DueDate:   req.DueDate,
+		Kind:      req.Kind,
+		IssueType: req.IssueType,
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			jsonError(w, "not found", http.StatusNotFound)
+			return
+		}
+		if isValidationErr(err) {
+			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		jsonError(w, "internal server error", http.StatusInternalServerError)
@@ -204,6 +262,12 @@ func (h *TodoHandler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ---
 
+// isValidationErr reports whether err originates from invalid input
+// (service.ErrValidation) as opposed to an infrastructure/store failure.
+func isValidationErr(err error) bool {
+	return errors.Is(err, service.ErrValidation)
+}
+
 // idFromPath extracts the numeric ID from a path like /api/todos/42.
 func idFromPath(path string) (int64, error) {
 	parts := strings.Split(strings.TrimSuffix(path, "/"), "/")
@@ -220,6 +284,8 @@ func todoResponse(t *domain.Todo) map[string]any {
 		"status":     t.Status,
 		"priority":   t.Priority,
 		"due_date":   t.DueDate,
+		"kind":       t.Kind,
+		"issue_type": t.IssueType,
 		"created_at": t.CreatedAt.Format(time.RFC3339),
 		"updated_at": t.UpdatedAt.Format(time.RFC3339),
 	}

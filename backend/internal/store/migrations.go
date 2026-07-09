@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS todos (
 		`ALTER TABLE todos ADD COLUMN status     TEXT    NOT NULL DEFAULT 'todo'`,
 		`ALTER TABLE todos ADD COLUMN priority   INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE todos ADD COLUMN due_date   TEXT    NULL`,
+		`ALTER TABLE todos ADD COLUMN kind       TEXT    NOT NULL DEFAULT 'note'`,
+		`ALTER TABLE todos ADD COLUMN issue_type TEXT    NULL`,
 	}
 
 	for _, stmt := range alterations {

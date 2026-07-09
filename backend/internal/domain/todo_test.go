@@ -105,6 +105,63 @@ func TestValidStatuses(t *testing.T) {
 	}
 }
 
+func TestValidKinds(t *testing.T) {
+	t.Parallel()
+
+	kinds := []string{domain.TodoKindNote, domain.TodoKindIssue}
+	for _, k := range kinds {
+		if !domain.ValidKinds[k] {
+			t.Fatalf("expected kind %q to be valid", k)
+		}
+	}
+
+	if domain.ValidKinds["backlog"] {
+		t.Fatalf("expected kind %q to be invalid", "backlog")
+	}
+}
+
+func TestValidIssueTypes(t *testing.T) {
+	t.Parallel()
+
+	issueTypes := []string{domain.IssueTypeFeature, domain.IssueTypeBug, domain.IssueTypeImprovement}
+	for _, it := range issueTypes {
+		if !domain.ValidIssueTypes[it] {
+			t.Fatalf("expected issue_type %q to be valid", it)
+		}
+	}
+
+	if domain.ValidIssueTypes["epic"] {
+		t.Fatalf("expected issue_type %q to be invalid", "epic")
+	}
+}
+
+func TestTodoZeroValue_KindAndIssueType(t *testing.T) {
+	t.Parallel()
+
+	var todo domain.Todo
+	if todo.Kind != "" {
+		t.Errorf("expected Kind zero value \"\", got %q", todo.Kind)
+	}
+	if todo.IssueType != nil {
+		t.Errorf("expected IssueType zero value nil, got %v", *todo.IssueType)
+	}
+}
+
+func TestTodoFieldAssignment_KindAndIssueType(t *testing.T) {
+	t.Parallel()
+
+	todo := domain.Todo{
+		Kind:      domain.TodoKindIssue,
+		IssueType: ptr(domain.IssueTypeBug),
+	}
+	if todo.Kind != domain.TodoKindIssue {
+		t.Errorf("expected Kind %q, got %q", domain.TodoKindIssue, todo.Kind)
+	}
+	if todo.IssueType == nil || *todo.IssueType != domain.IssueTypeBug {
+		t.Fatalf("expected IssueType to be set to %q", domain.IssueTypeBug)
+	}
+}
+
 func ptr(v string) *string {
 	return &v
 }

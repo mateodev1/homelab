@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Sidebar, type TaskView, VIEWS } from './components/Sidebar';
+import { KIND_VIEWS, Sidebar, type TaskView, VIEWS } from './components/Sidebar';
 import { TaskForm } from './components/TaskForm';
 import { TaskList } from './components/TaskList';
 import { Button } from './components/ui/button';
@@ -27,8 +27,11 @@ function App() {
         ...groupedTodos.cancelled,
       ];
     }
+    if (activeView === 'note' || activeView === 'issue') {
+      return todos.filter((todo) => todo.kind === activeView);
+    }
     return groupedTodos[activeView];
-  }, [activeView, groupedTodos]);
+  }, [activeView, groupedTodos, todos]);
 
   const filteredTasks = useMemo(() => viewTasks.filter(matchesQuery(query)), [viewTasks, query]);
 
@@ -43,12 +46,17 @@ function App() {
     in_progress: groupedTodos.in_progress.length,
     done: groupedTodos.done.length,
     cancelled: groupedTodos.cancelled.length,
+    note: todos.filter((todo) => todo.kind === 'note').length,
+    issue: todos.filter((todo) => todo.kind === 'issue').length,
   };
 
   const editingTodo =
     editingTodoID == null ? null : (todos.find((todo) => todo.id === editingTodoID) ?? null);
 
-  const viewTitle = VIEWS.find((view) => view.key === activeView)?.label ?? 'All';
+  const viewTitle =
+    VIEWS.find((view) => view.key === activeView)?.label ??
+    KIND_VIEWS.find((view) => view.key === activeView)?.label ??
+    'All';
 
   const openCreate = () => {
     setEditingTodoID(null);
@@ -143,8 +151,8 @@ function App() {
         <DialogContent label={editingTodo ? 'Edit task' : 'Create task'}>
           <TaskForm
             todo={editingTodo}
-            onCreate={async (title, body, priority, dueDate) => {
-              await addTodo(title, body, priority, dueDate);
+            onCreate={async (title, body, priority, dueDate, kind, issueType) => {
+              await addTodo(title, body, priority, dueDate, kind, issueType);
               closeDialog();
             }}
             onUpdate={async (id, changes) => {

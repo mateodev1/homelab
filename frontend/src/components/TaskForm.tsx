@@ -1,5 +1,5 @@
 import { type FormEvent, Suspense, lazy, useEffect, useState } from 'react';
-import type { Todo, TodoStatus } from '../types/todo';
+import type { IssueType, Todo, TodoKind, TodoStatus } from '../types/todo';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
@@ -19,10 +19,14 @@ interface TaskFormProps {
     body?: string,
     priority?: 0 | 1 | 2 | 3,
     dueDate?: string | null,
+    kind?: TodoKind,
+    issueType?: IssueType | null,
   ) => Promise<void>;
   onUpdate: (
     id: number,
-    changes: Partial<Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date'>>,
+    changes: Partial<
+      Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type'>
+    >,
   ) => Promise<void>;
   onCancelEdit: () => void;
 }
@@ -33,6 +37,8 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
   const [status, setStatus] = useState<TodoStatus>('todo');
   const [priority, setPriority] = useState<0 | 1 | 2 | 3>(0);
   const [dueDate, setDueDate] = useState<string>('');
+  const [kind, setKind] = useState<TodoKind>('note');
+  const [issueType, setIssueType] = useState<IssueType | ''>('');
 
   const isEditing = Boolean(todo);
 
@@ -43,6 +49,8 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
       setStatus('todo');
       setPriority(0);
       setDueDate('');
+      setKind('note');
+      setIssueType('');
       return;
     }
 
@@ -51,6 +59,8 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
     setStatus(todo.status);
     setPriority(todo.priority);
     setDueDate(todo.due_date ?? '');
+    setKind(todo.kind);
+    setIssueType(todo.issue_type ?? '');
   }, [todo]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -61,6 +71,8 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
       return;
     }
 
+    const resolvedIssueType = kind === 'issue' ? issueType || null : null;
+
     if (todo) {
       await onUpdate(todo.id, {
         title: trimmedTitle,
@@ -68,15 +80,19 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
         status,
         priority,
         due_date: dueDate || null,
+        kind,
+        issue_type: resolvedIssueType,
       });
       return;
     }
 
-    await onCreate(trimmedTitle, body, priority, dueDate || null);
+    await onCreate(trimmedTitle, body, priority, dueDate || null, kind, resolvedIssueType);
     setTitle('');
     setBody('');
     setPriority(0);
     setDueDate('');
+    setKind('note');
+    setIssueType('');
   };
 
   return (
@@ -95,6 +111,38 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
           />
 
           <div className="grid gap-3 sm:grid-cols-3">
+            <Label className="flex-col items-stretch gap-1.5">
+              Kind
+              <Select
+                value={kind}
+                onChange={(event) => {
+                  const nextKind = event.target.value as TodoKind;
+                  setKind(nextKind);
+                  if (nextKind !== 'issue') {
+                    setIssueType('');
+                  }
+                }}
+              >
+                <option value="note">Note</option>
+                <option value="issue">Issue</option>
+              </Select>
+            </Label>
+
+            {kind === 'issue' ? (
+              <Label className="flex-col items-stretch gap-1.5">
+                Issue type
+                <Select
+                  value={issueType}
+                  onChange={(event) => setIssueType(event.target.value as IssueType | '')}
+                >
+                  <option value="">Unclassified</option>
+                  <option value="feature">Feature</option>
+                  <option value="bug">Bug</option>
+                  <option value="improvement">Improvement</option>
+                </Select>
+              </Label>
+            ) : null}
+
             <Label className="flex-col items-stretch gap-1.5">
               Priority
               <Select

@@ -21,6 +21,8 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     status: 'in_progress',
     priority: 2,
     due_date: '2026-07-01',
+    kind: 'note',
+    issue_type: null,
     created_at: '2026-06-20T10:00:00Z',
     updated_at: '2026-06-20T10:00:00Z',
     ...overrides,
@@ -52,8 +54,45 @@ describe('TaskForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
 
     await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith('New task', '# Markdown body', 3, '2026-07-02');
+      expect(onCreate).toHaveBeenCalledWith(
+        'New task',
+        '# Markdown body',
+        3,
+        '2026-07-02',
+        'note',
+        null,
+      );
     });
+  });
+
+  it('creates an issue with an issue type', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+
+    render(<TaskForm todo={null} onCreate={onCreate} onUpdate={vi.fn()} onCancelEdit={vi.fn()} />);
+
+    fireEvent.change(screen.getByPlaceholderText('Task title'), {
+      target: { value: 'Fix bug' },
+    });
+    fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'issue' } });
+    fireEvent.change(screen.getByLabelText('Issue type'), { target: { value: 'bug' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith('Fix bug', '', 0, null, 'issue', 'bug');
+    });
+  });
+
+  it('hides the issue type selector when kind is note', () => {
+    render(<TaskForm todo={null} onCreate={vi.fn()} onUpdate={vi.fn()} onCancelEdit={vi.fn()} />);
+
+    expect(screen.queryByLabelText('Issue type')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'issue' } });
+    expect(screen.getByLabelText('Issue type')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'note' } });
+    expect(screen.queryByLabelText('Issue type')).not.toBeInTheDocument();
   });
 
   it('edits an existing task', async () => {
@@ -83,6 +122,8 @@ describe('TaskForm', () => {
         status: 'done',
         priority: 2,
         due_date: '2026-07-01',
+        kind: 'note',
+        issue_type: null,
       });
     });
 

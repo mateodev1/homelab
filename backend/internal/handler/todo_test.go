@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,9 +21,12 @@ type mockTodoService struct {
 	err   error
 }
 
-func (m *mockTodoService) CreateTodo(_ context.Context, title, body string, priority int, dueDate *string, createdAt time.Time) (*domain.Todo, error) {
+func (m *mockTodoService) CreateTodo(_ context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, createdAt time.Time) (*domain.Todo, error) {
 	if m.err != nil {
 		return nil, m.err
+	}
+	if kind == "" {
+		kind = domain.TodoKindNote
 	}
 	t := &domain.Todo{
 		ID:        int64(len(m.todos) + 1),
@@ -31,6 +35,8 @@ func (m *mockTodoService) CreateTodo(_ context.Context, title, body string, prio
 		Status:    domain.TodoStatusTodo,
 		Priority:  priority,
 		DueDate:   dueDate,
+		Kind:      kind,
+		IssueType: issueType,
 		CreatedAt: createdAt,
 		UpdatedAt: createdAt,
 	}
@@ -80,6 +86,15 @@ func (m *mockTodoService) UpdateTodo(_ context.Context, id int64, patch service.
 		}
 		if patch.DueDate != nil {
 			t.DueDate = *patch.DueDate
+		}
+		if patch.Kind != nil {
+			t.Kind = *patch.Kind
+		}
+		if patch.IssueType != nil {
+			t.IssueType = *patch.IssueType
+		}
+		if t.IssueType != nil && t.Kind != domain.TodoKindIssue {
+			return nil, fmt.Errorf("issue_type can only be set when kind is issue: %w", service.ErrValidation)
 		}
 		cp := *t
 		return &cp, nil
@@ -190,6 +205,223 @@ func TestCreateTodo_InvalidPriority(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestCreateTodo_DefaultKindNote(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{})
+
+	body := `{"title":"New note"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d — body: %s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["kind"] != domain.TodoKindNote {
+		t.Errorf("expected kind=note, got %v", resp["kind"])
+	}
+	if resp["issue_type"] != nil {
+		t.Errorf("expected issue_type=nil, got %v", resp["issue_type"])
+	}
+}
+
+func TestCreateTodo_IssueWithType(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{})
+
+	body := `{"title":"Fix bug","kind":"issue","issue_type":"bug"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d — body: %s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["kind"] != domain.TodoKindIssue {
+		t.Errorf("expected kind=issue, got %v", resp["kind"])
+	}
+	if resp["issue_type"] != domain.IssueTypeBug {
+		t.Errorf("expected issue_type=bug, got %v", resp["issue_type"])
+	}
+}
+
+func TestCreateTodo_InvalidKind(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{})
+
+	body := `{"title":"bad","kind":"backlog"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestCreateTodo_IssueTypeRequiresIssueKind(t *testing.T) {
+	t.Parallel()
+
+	mux := buildMux(&mockTodoService{})
+
+	body := `{"title":"bad","issue_type":"bug"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestListTodos_FilterByKind(t *testing.T) {
+	t.Parallel()
+
+	issueType := domain.IssueTypeBug
+	ms := &mockTodoService{todos: []*domain.Todo{
+		{ID: 1, Title: "Note", Kind: domain.TodoKindNote, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: 2, Title: "Issue", Kind: domain.TodoKindIssue, IssueType: &issueType, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	}}
+	mux := buildMux(ms)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/todos?kind=issue", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var body []map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if len(body) != 1 {
+		t.Fatalf("expected 1 todo, got %d", len(body))
+	}
+	if body[0]["kind"] != domain.TodoKindIssue {
+		t.Errorf("expected kind=issue, got %v", body[0]["kind"])
+	}
+}
+
+func TestListTodos_FilterByIssueType(t *testing.T) {
+	t.Parallel()
+
+	bugType := domain.IssueTypeBug
+	featureType := domain.IssueTypeFeature
+	ms := &mockTodoService{todos: []*domain.Todo{
+		{ID: 1, Title: "Bug", Kind: domain.TodoKindIssue, IssueType: &bugType, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+		{ID: 2, Title: "Feature", Kind: domain.TodoKindIssue, IssueType: &featureType, CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	}}
+	mux := buildMux(ms)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/todos?issue_type=bug", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var body []map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if len(body) != 1 {
+		t.Fatalf("expected 1 todo, got %d", len(body))
+	}
+	if body[0]["issue_type"] != domain.IssueTypeBug {
+		t.Errorf("expected issue_type=bug, got %v", body[0]["issue_type"])
+	}
+}
+
+func TestUpdateTodo_SetKindAndIssueType(t *testing.T) {
+	t.Parallel()
+
+	ms := &mockTodoService{todos: []*domain.Todo{{
+		ID:        7,
+		Title:     "Before",
+		Status:    domain.TodoStatusTodo,
+		Kind:      domain.TodoKindNote,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}}}
+	mux := buildMux(ms)
+
+	body := `{"kind":"issue","issue_type":"improvement"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/todos/7", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d — body: %s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["kind"] != domain.TodoKindIssue {
+		t.Errorf("expected kind=issue, got %v", resp["kind"])
+	}
+	if resp["issue_type"] != domain.IssueTypeImprovement {
+		t.Errorf("expected issue_type=improvement, got %v", resp["issue_type"])
+	}
+}
+
+func TestUpdateTodo_InvalidKind(t *testing.T) {
+	t.Parallel()
+
+	ms := &mockTodoService{todos: []*domain.Todo{{
+		ID: 1, Title: "Before", Status: domain.TodoStatusTodo, Kind: domain.TodoKindNote,
+		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}}}
+	mux := buildMux(ms)
+
+	body := `{"kind":"backlog"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/todos/1", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestUpdateTodo_IssueTypeRequiresIssueKind(t *testing.T) {
+	t.Parallel()
+
+	ms := &mockTodoService{todos: []*domain.Todo{{
+		ID: 1, Title: "Before", Status: domain.TodoStatusTodo, Kind: domain.TodoKindNote,
+		CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}}}
+	mux := buildMux(ms)
+
+	body := `{"issue_type":"bug"}`
+	req := httptest.NewRequest(http.MethodPut, "/api/todos/1", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d — body: %s", rec.Code, rec.Body.String())
 	}
 }
 

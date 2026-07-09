@@ -11,6 +11,8 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     status: 'todo',
     priority: 2,
     due_date: '2026-07-03',
+    kind: 'note',
+    issue_type: null,
     created_at: '2026-06-21T03:00:00Z',
     updated_at: '2026-06-21T03:00:00Z',
     ...overrides,
@@ -67,6 +69,26 @@ describe('TaskRow', () => {
     );
 
     expect(screen.getByRole('img', { name: 'In progress' })).toBeInTheDocument();
+  });
+
+  it('conveys kind via an accessible icon and shows an issue_type badge for issues', () => {
+    render(
+      <TaskRow
+        todo={makeTodo({ kind: 'issue', issue_type: 'bug' })}
+        onSelect={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Issue' })).toBeInTheDocument();
+    expect(screen.getByText('Bug')).toBeInTheDocument();
+  });
+
+  it('does not render an issue_type badge for notes', () => {
+    render(<TaskRow todo={makeTodo({ kind: 'note' })} onSelect={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByRole('img', { name: 'Note' })).toBeInTheDocument();
+    expect(screen.queryByText(/feature|bug|improvement/i)).not.toBeInTheDocument();
   });
 
   it('does not render a body preview in the compact list row', () => {

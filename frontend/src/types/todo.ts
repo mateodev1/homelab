@@ -1,5 +1,7 @@
 export type TodoStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 export type Priority = 0 | 1 | 2 | 3;
+export type TodoKind = 'note' | 'issue';
+export type IssueType = 'feature' | 'bug' | 'improvement';
 
 export interface Todo {
   id: number;
@@ -8,6 +10,8 @@ export interface Todo {
   status: TodoStatus;
   priority: Priority;
   due_date: string | null;
+  kind: TodoKind;
+  issue_type: IssueType | null;
   created_at: string;
   updated_at: string;
 }
@@ -17,6 +21,8 @@ export interface CreateTodoPayload {
   body?: string;
   priority?: Priority;
   due_date?: string | null;
+  kind?: TodoKind;
+  issue_type?: IssueType | null;
 }
 
 export interface UpdateTodoPayload {
@@ -25,6 +31,8 @@ export interface UpdateTodoPayload {
   status?: TodoStatus;
   priority?: Priority;
   due_date?: string | null;
+  kind?: TodoKind;
+  issue_type?: IssueType | null;
 }
 
 export class ApiError extends Error {

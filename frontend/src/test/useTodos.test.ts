@@ -31,6 +31,8 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     status: 'todo',
     priority: 0,
     due_date: null,
+    kind: 'note',
+    issue_type: null,
     created_at: '2026-06-21T00:00:00Z',
     updated_at: '2026-06-21T00:00:00Z',
     ...overrides,
@@ -101,6 +103,8 @@ describe('useTodos', () => {
       body: '',
       priority: 2,
       due_date: '2026-07-01',
+      kind: 'note',
+      issue_type: null,
     });
     expect(result.current.todos).toEqual([created]);
   });
@@ -133,6 +137,8 @@ describe('useTodos', () => {
       status: 'in_progress',
       priority: 3,
       due_date: null,
+      kind: 'note',
+      issue_type: null,
     });
     expect(result.current.todos).toEqual([updatedTodo]);
   });

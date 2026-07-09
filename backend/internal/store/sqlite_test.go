@@ -52,6 +52,40 @@ func TestCreate_Insert(t *testing.T) {
 	if todo.Status != domain.TodoStatusTodo {
 		t.Fatalf("expected default status todo, got %q", todo.Status)
 	}
+	if todo.Kind != domain.TodoKindNote {
+		t.Fatalf("expected default kind note, got %q", todo.Kind)
+	}
+}
+
+func TestCreate_IssueWithType(t *testing.T) {
+	t.Parallel()
+
+	db := openTestDB(t)
+	s := store.New(db)
+	ctx := context.Background()
+
+	issueType := domain.IssueTypeBug
+	todo := &domain.Todo{
+		Title:     "Fix bug",
+		Kind:      domain.TodoKindIssue,
+		IssueType: &issueType,
+		CreatedAt: time.Now().UTC().Truncate(time.Second),
+	}
+
+	if err := s.Create(ctx, todo); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	got, err := s.GetByID(ctx, todo.ID)
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if got.Kind != domain.TodoKindIssue {
+		t.Fatalf("expected kind issue, got %q", got.Kind)
+	}
+	if got.IssueType == nil || *got.IssueType != domain.IssueTypeBug {
+		t.Fatalf("expected issue_type bug, got %#v", got.IssueType)
+	}
 }
 
 func TestGetByID_Found(t *testing.T) {
@@ -89,6 +123,12 @@ func TestGetByID_Found(t *testing.T) {
 	}
 	if got.DueDate == nil || *got.DueDate != dueDate {
 		t.Fatalf("expected due date %q, got %#v", dueDate, got.DueDate)
+	}
+	if got.Kind != domain.TodoKindNote {
+		t.Fatalf("expected default kind note, got %q", got.Kind)
+	}
+	if got.IssueType != nil {
+		t.Fatalf("expected nil issue_type, got %#v", got.IssueType)
 	}
 }
 
@@ -138,10 +178,13 @@ func TestUpdate_ChangesFields(t *testing.T) {
 	}
 
 	dueDate := "2026-08-01"
+	issueType := domain.IssueTypeImprovement
 	todo.Title = "After"
 	todo.Status = domain.TodoStatusDone
 	todo.Priority = 3
 	todo.DueDate = &dueDate
+	todo.Kind = domain.TodoKindIssue
+	todo.IssueType = &issueType
 	if err := s.Update(ctx, todo); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -161,6 +204,12 @@ func TestUpdate_ChangesFields(t *testing.T) {
 	}
 	if got.DueDate == nil || *got.DueDate != dueDate {
 		t.Fatalf("expected due date %q, got %#v", dueDate, got.DueDate)
+	}
+	if got.Kind != domain.TodoKindIssue {
+		t.Fatalf("expected kind issue, got %q", got.Kind)
+	}
+	if got.IssueType == nil || *got.IssueType != domain.IssueTypeImprovement {
+		t.Fatalf("expected issue_type improvement, got %#v", got.IssueType)
 	}
 }
 
@@ -260,6 +309,9 @@ func TestTodo_StatusDefaultsFromMigration(t *testing.T) {
 	}
 	if todos[0].Status != domain.TodoStatusTodo {
 		t.Fatalf("expected default status todo, got %q", todos[0].Status)
+	}
+	if todos[0].Kind != domain.TodoKindNote {
+		t.Fatalf("expected default kind note from migration, got %q", todos[0].Kind)
 	}
 }
 

@@ -11,6 +11,8 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     status: 'todo',
     priority: 0,
     due_date: null,
+    kind: 'note',
+    issue_type: null,
     created_at: '2026-06-21T03:00:00Z',
     updated_at: '2026-06-21T03:00:00Z',
     ...overrides,

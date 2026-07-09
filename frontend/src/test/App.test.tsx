@@ -38,6 +38,8 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     status: 'todo',
     priority: 1,
     due_date: null,
+    kind: 'note',
+    issue_type: null,
     created_at: '2026-06-21T03:00:00Z',
     updated_at: '2026-06-21T03:00:00Z',
     ...overrides,
@@ -112,6 +114,28 @@ describe('App', () => {
 
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.getByText('Beta')).toBeInTheDocument();
+  });
+
+  it('sidebar kind filtering shows only tasks from the selected kind', () => {
+    mockTodos([
+      makeTodo({ id: 1, title: 'A note', kind: 'note' }),
+      makeTodo({ id: 2, title: 'An issue', kind: 'issue', issue_type: 'bug' }),
+    ]);
+
+    renderApp();
+
+    expect(screen.getByText('A note')).toBeInTheDocument();
+    expect(screen.getByText('An issue')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^issues/i }));
+
+    expect(screen.queryByText('A note')).not.toBeInTheDocument();
+    expect(screen.getByText('An issue')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^notes/i }));
+
+    expect(screen.getByText('A note')).toBeInTheDocument();
+    expect(screen.queryByText('An issue')).not.toBeInTheDocument();
   });
 
   it('opens the create task modal from the sidebar button and creates a task', async () => {

@@ -2,13 +2,13 @@ import { cn } from '@/lib/utils';
 import { useAuth0 } from '@auth0/auth0-react';
 import { CheckSquare, Moon, Plus, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import type { TodoStatus } from '../types/todo';
+import type { TodoKind, TodoStatus } from '../types/todo';
 import { LoginButton } from './LoginButton';
 import { LogoutButton } from './LogoutButton';
 import { Avatar, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 
-export type TaskView = 'all' | TodoStatus;
+export type TaskView = 'all' | TodoStatus | TodoKind;
 
 interface ViewDefinition {
   key: TaskView;
@@ -21,6 +21,11 @@ export const VIEWS: ViewDefinition[] = [
   { key: 'in_progress', label: 'In Progress' },
   { key: 'done', label: 'Done' },
   { key: 'cancelled', label: 'Cancelled' },
+];
+
+export const KIND_VIEWS: ViewDefinition[] = [
+  { key: 'note', label: 'Notes' },
+  { key: 'issue', label: 'Issues' },
 ];
 
 interface SidebarProps {
@@ -61,6 +66,30 @@ export function Sidebar({ activeView, onSelectView, counts, onCreateTask }: Side
       <nav aria-label="Task views" className="flex-1 overflow-y-auto px-2">
         <ul className="grid gap-0.5">
           {VIEWS.map((view) => (
+            <li key={view.key}>
+              <button
+                type="button"
+                onClick={() => onSelectView(view.key)}
+                aria-current={activeView === view.key ? 'true' : undefined}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors',
+                  activeView === view.key
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-foreground hover:bg-accent/60',
+                )}
+              >
+                <span>{view.label}</span>
+                <span className="text-xs text-muted-foreground">{counts[view.key]}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-3 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Type
+        </p>
+        <ul className="mt-1 grid gap-0.5">
+          {KIND_VIEWS.map((view) => (
             <li key={view.key}>
               <button
                 type="button"

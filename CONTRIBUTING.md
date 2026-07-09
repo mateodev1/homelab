@@ -1,15 +1,30 @@
-# Contributing — Pre-Push Checklist
+# Contributing — Pre-Push and Deploy Checklist
 
-All checks below must pass before pushing or opening a PR. CI runs exactly these same commands.
+Use this checklist before pushing, opening a PR, or creating a production tag.
+
+The local commands below are the source of truth for deploy preparation. CI runs the same
+categories of checks, but some jobs use GitHub Actions directly instead of the `task` wrapper.
 
 ---
 
 ## Quick run (all at once)
 
 ```bash
+pnpm --dir frontend install
 task lint   # lint Go + frontend
 task test   # test Go + frontend
+task build  # build Go backend + CLI
+pnpm --dir frontend run type-check
+pnpm --dir frontend run coverage
+rm -f api homelab
+git status --short
 ```
+
+Expected result before deploy:
+
+- Every command exits with code `0`.
+- `git status --short` shows only intentional source/doc changes.
+- No root-level `api` or `homelab` binaries remain after `task build`.
 
 ---
 
@@ -23,6 +38,8 @@ task lint:go
 
 # Direct (requires golangci-lint v2.3.0+)
 cd backend && golangci-lint run ./...
+cd cli && golangci-lint run --config ../backend/.golangci.yml ./...
+cd shared && golangci-lint run --config ../backend/.golangci.yml ./...
 
 # Via Docker (no local Go/golangci-lint needed)
 docker run --rm \
@@ -33,6 +50,9 @@ docker run --rm \
 
 Config: `backend/.golangci.yml` (version `"2"`, enabled linters: `errcheck`, `govet`, `staticcheck`, `unused`)
 
+This repo uses `go.work` with separate Go modules. Do not run `golangci-lint run ./...`
+from the repo root.
+
 ### Tests
 
 ```bash
@@ -41,7 +61,12 @@ task test:go
 
 # Direct
 cd backend && go test -race ./...
+cd cli && go test -race ./...
+cd shared && go test -race ./...
 ```
+
+This repo uses `go.work` with separate Go modules. Do not run `go test -race ./...`
+from the repo root.
 
 #### Test coverage per package
 
@@ -66,9 +91,9 @@ CI enforces ≥ 60% coverage across `./backend/... ./shared/...`.
 pnpm --dir frontend install
 ```
 
-> `package.json` declares `pnpm.onlyBuiltDependencies` to allow `@biomejs/biome` and `esbuild`
-> to run their postinstall scripts (native binary download). If those are blocked, biome will
-> fall back to a slow JS shim and may incorrectly lint `node_modules`.
+> `frontend/pnpm-workspace.yaml` must include `packages: ['.']` and allow `@biomejs/biome`
+> and `esbuild` to run postinstall scripts. Without that, CI can fail during install or miss
+> the native Biome/Rollup binaries needed for lint/test execution.
 
 ### Lint & format (Biome)
 
@@ -150,8 +175,55 @@ build ──→ build-and-push-backend ──┐
 
 ## Deploy to production
 
+Production deploys are triggered by pushing a semver tag. Do not tag until the deploy
+preparation checklist is green locally and `main` contains the release commit.
+
+### 1. Prepare locally
+
 ```bash
-git tag v0.1.7 && git push origin v0.1.7
+pnpm --dir frontend install
+task lint
+task test
+task build
+pnpm --dir frontend run type-check
+pnpm --dir frontend run coverage
+rm -f api homelab
+git status --short
+```
+
+If any command fails, fix the failure and rerun the full checklist. Do not deploy from a
+partially verified state.
+
+### 2. Push main
+
+```bash
+git push origin main
+```
+
+Wait for the `main` CI run to pass before tagging when possible.
+
+### 3. Create and push the production tag
+
+```bash
+git tag v0.1.18
+git push origin v0.1.18
 ```
 
 This triggers the full CI pipeline. If all tests pass, the Docker images are built, pushed to GHCR, and deployed automatically.
+
+### 4. Watch CI and verify production
+
+```bash
+gh run list --limit 5
+gh run watch <run-id> --exit-status
+curl https://todos.matdev.site/api/health
+```
+
+Expected production health response:
+
+```json
+{"status":"ok","db_ok":true}
+```
+
+If the tag workflow fails before deploy, fix the issue on `main` and create a new patch tag.
+Do not reuse or force-move a production tag.

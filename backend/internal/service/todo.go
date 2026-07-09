@@ -15,12 +15,18 @@ type TodoService struct {
 	store domain.TodoStore
 }
 
+// ErrValidation wraps errors caused by invalid input (as opposed to
+// infrastructure/store failures) so callers can distinguish 400 from 500.
+var ErrValidation = errors.New("validation error")
+
 type TodoPatch struct {
-	Title    *string
-	Body     *string
-	Status   *string
-	Priority *int
-	DueDate  **string
+	Title     *string
+	Body      *string
+	Status    *string
+	Priority  *int
+	DueDate   **string
+	Kind      *string
+	IssueType **string
 }
 
 // NewTodoService creates a new TodoService with the given store.
@@ -28,10 +34,34 @@ func NewTodoService(store domain.TodoStore) *TodoService {
 	return &TodoService{store: store}
 }
 
+// validateKindAndIssueType applies the "note" default when kind is empty and
+// enforces that issue_type is only set when kind == "issue".
+func validateKindAndIssueType(kind string, issueType *string) (string, error) {
+	if kind == "" {
+		kind = domain.TodoKindNote
+	}
+	if !domain.ValidKinds[kind] {
+		return "", fmt.Errorf("kind must be one of: note, issue: %w", ErrValidation)
+	}
+	if issueType != nil {
+		if kind != domain.TodoKindIssue {
+			return "", fmt.Errorf("issue_type can only be set when kind is issue: %w", ErrValidation)
+		}
+		if !domain.ValidIssueTypes[*issueType] {
+			return "", fmt.Errorf("issue_type must be one of: feature, bug, improvement: %w", ErrValidation)
+		}
+	}
+	return kind, nil
+}
+
 // CreateTodo creates a new Todo with the given fields and persists it.
-func (s *TodoService) CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, createdAt time.Time) (*domain.Todo, error) {
+func (s *TodoService) CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, createdAt time.Time) (*domain.Todo, error) {
 	if priority < 0 || priority > 3 {
 		return nil, errors.New("priority must be between 0 and 3")
+	}
+	kind, err := validateKindAndIssueType(kind, issueType)
+	if err != nil {
+		return nil, err
 	}
 	todo := &domain.Todo{
 		Title:     title,
@@ -39,6 +69,8 @@ func (s *TodoService) CreateTodo(ctx context.Context, title, body string, priori
 		Status:    domain.TodoStatusTodo,
 		Priority:  priority,
 		DueDate:   dueDate,
+		Kind:      kind,
+		IssueType: issueType,
 		CreatedAt: createdAt.UTC(),
 	}
 	if err := s.store.Create(ctx, todo); err != nil {
@@ -92,6 +124,26 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int64, patch TodoPatch)
 	}
 	if patch.DueDate != nil {
 		todo.DueDate = *patch.DueDate
+	}
+	if patch.Kind != nil {
+		if !domain.ValidKinds[*patch.Kind] {
+			return nil, fmt.Errorf("kind must be one of: note, issue: %w", ErrValidation)
+		}
+		todo.Kind = *patch.Kind
+		if todo.Kind == domain.TodoKindNote && patch.IssueType == nil {
+			todo.IssueType = nil
+		}
+	}
+	if patch.IssueType != nil {
+		todo.IssueType = *patch.IssueType
+	}
+	if todo.IssueType != nil {
+		if todo.Kind != domain.TodoKindIssue {
+			return nil, fmt.Errorf("issue_type can only be set when kind is issue: %w", ErrValidation)
+		}
+		if !domain.ValidIssueTypes[*todo.IssueType] {
+			return nil, fmt.Errorf("issue_type must be one of: feature, bug, improvement: %w", ErrValidation)
+		}
 	}
 
 	if err := s.store.Update(ctx, todo); err != nil {

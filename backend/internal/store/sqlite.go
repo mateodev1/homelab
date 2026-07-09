@@ -26,15 +26,18 @@ var _ domain.TodoStore = (*SQLiteStore)(nil)
 
 // Create inserts a new Todo row and sets todo.ID to the new row's ID.
 func (s *SQLiteStore) Create(ctx context.Context, todo *domain.Todo) error {
-	const q = `INSERT INTO todos (title, body, status, priority, due_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	const q = `INSERT INTO todos (title, body, status, priority, due_date, kind, issue_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	if todo.Status == "" {
 		todo.Status = domain.TodoStatusTodo
 	}
+	if todo.Kind == "" {
+		todo.Kind = domain.TodoKindNote
+	}
 
 	now := todo.CreatedAt.UTC().Format(time.RFC3339)
 	res, err := s.db.ExecContext(ctx, q,
-		todo.Title, todo.Body, todo.Status, todo.Priority, todo.DueDate, now, now,
+		todo.Title, todo.Body, todo.Status, todo.Priority, todo.DueDate, todo.Kind, todo.IssueType, now, now,
 	)
 	if err != nil {
 		return fmt.Errorf("store.Create: %w", err)
@@ -52,7 +55,7 @@ func (s *SQLiteStore) Create(ctx context.Context, todo *domain.Todo) error {
 
 // GetAll returns all Todo rows ordered by id ASC.
 func (s *SQLiteStore) GetAll(ctx context.Context) ([]*domain.Todo, error) {
-	const q = `SELECT id, title, body, status, priority, due_date, created_at, updated_at FROM todos ORDER BY id ASC`
+	const q = `SELECT id, title, body, status, priority, due_date, kind, issue_type, created_at, updated_at FROM todos ORDER BY id ASC`
 
 	rows, err := s.db.QueryContext(ctx, q)
 	if err != nil {
@@ -80,7 +83,7 @@ func (s *SQLiteStore) GetAll(ctx context.Context) ([]*domain.Todo, error) {
 
 // GetByID returns the Todo with the given ID, or an error if not found.
 func (s *SQLiteStore) GetByID(ctx context.Context, id int64) (*domain.Todo, error) {
-	const q = `SELECT id, title, body, status, priority, due_date, created_at, updated_at FROM todos WHERE id = ?`
+	const q = `SELECT id, title, body, status, priority, due_date, kind, issue_type, created_at, updated_at FROM todos WHERE id = ?`
 
 	row := s.db.QueryRowContext(ctx, q, id)
 	todo, err := scanTodoRow(row)
@@ -95,12 +98,12 @@ func (s *SQLiteStore) GetByID(ctx context.Context, id int64) (*domain.Todo, erro
 
 // Update persists changes to an existing Todo row.
 func (s *SQLiteStore) Update(ctx context.Context, todo *domain.Todo) error {
-	const q = `UPDATE todos SET title = ?, body = ?, status = ?, priority = ?, due_date = ?, updated_at = ? WHERE id = ?`
+	const q = `UPDATE todos SET title = ?, body = ?, status = ?, priority = ?, due_date = ?, kind = ?, issue_type = ?, updated_at = ? WHERE id = ?`
 
 	todo.UpdatedAt = time.Now().UTC()
 	res, err := s.db.ExecContext(ctx, q,
 		todo.Title, todo.Body, todo.Status, todo.Priority,
-		todo.DueDate, todo.UpdatedAt.Format(time.RFC3339), todo.ID,
+		todo.DueDate, todo.Kind, todo.IssueType, todo.UpdatedAt.Format(time.RFC3339), todo.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("store.Update: %w", err)
@@ -145,14 +148,18 @@ func scanTodo(s scanner) (*domain.Todo, error) {
 	var (
 		todo      domain.Todo
 		dueDate   sql.NullString
+		issueType sql.NullString
 		createdAt string
 		updatedAt string
 	)
-	if err := s.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Status, &todo.Priority, &dueDate, &createdAt, &updatedAt); err != nil {
+	if err := s.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Status, &todo.Priority, &dueDate, &todo.Kind, &issueType, &createdAt, &updatedAt); err != nil {
 		return nil, err
 	}
 	if dueDate.Valid {
 		todo.DueDate = &dueDate.String
+	}
+	if issueType.Valid {
+		todo.IssueType = &issueType.String
 	}
 	ca, err := time.Parse(time.RFC3339, createdAt)
 	if err != nil {
@@ -175,14 +182,18 @@ func scanTodoRow(row *sql.Row) (*domain.Todo, error) {
 	var (
 		todo      domain.Todo
 		dueDate   sql.NullString
+		issueType sql.NullString
 		createdAt string
 		updatedAt string
 	)
-	if err := row.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Status, &todo.Priority, &dueDate, &createdAt, &updatedAt); err != nil {
+	if err := row.Scan(&todo.ID, &todo.Title, &todo.Body, &todo.Status, &todo.Priority, &dueDate, &todo.Kind, &issueType, &createdAt, &updatedAt); err != nil {
 		return nil, err
 	}
 	if dueDate.Valid {
 		todo.DueDate = &dueDate.String
+	}
+	if issueType.Valid {
+		todo.IssueType = &issueType.String
 	}
 	ca, err := time.Parse(time.RFC3339, createdAt)
 	if err != nil {
