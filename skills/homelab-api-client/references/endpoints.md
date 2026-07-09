@@ -4,7 +4,7 @@
 
 - Base URL: `API_BASE_URL` env var (e.g. `https://homelab.example.com`).
 - Auth: `API_KEY` env var, sent as `Authorization: Bearer <API_KEY>` on every request.
-  - **Status: planned, not yet enforced.** The server currently accepts requests without this header. Send it anyway so the client is forward-compatible once auth is enabled server-side.
+  - **Status: enforced in production.** Verified against the live deployment: requests without the header (or with a wrong value) get `401 {"error": "unauthorized"}`.
 - Content type: `application/json` for all request/response bodies.
 
 ## Enums
@@ -16,7 +16,7 @@
 
 ### `GET /api/health`
 
-Health check. No auth required today (send the header anyway per contract above).
+Health check. No auth required (send the header anyway per contract above).
 
 Response `200`:
 ```json

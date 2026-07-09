@@ -1,5 +1,7 @@
+import { Loader2 } from 'lucide-react';
 import type { Todo } from '../types/todo';
 import { TaskRow } from './TaskRow';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface GroupedTodos {
   todo: Todo[];
@@ -32,43 +34,51 @@ export function TaskList({
 }: TaskListProps) {
   if (loading) {
     return (
-      <div className="task-list__status">
-        <div className="spinner" aria-label="Loading tasks" />
+      <div className="flex justify-center py-12">
+        <Loader2
+          role="status"
+          aria-label="Loading tasks"
+          className="size-8 animate-spin text-muted-foreground"
+        />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="task-list__status task-list__status--error">
-        <p>Failed to load tasks: {error}</p>
+      <div className="flex justify-center py-8">
+        <p className="text-sm text-destructive">Failed to load tasks: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className="task-list">
+    <div className="grid gap-4">
       {STATUS_SECTIONS.map((section) => {
         const tasks = groupedTodos[section.key];
 
         return (
-          <section key={section.key} className="task-list__section">
-            <h2 className="task-list__section-title">{section.label}</h2>
-            {tasks.length === 0 ? (
-              <p className="task-list__empty">No tasks</p>
-            ) : (
-              <div className="task-list__rows">
-                {tasks.map((todo) => (
-                  <TaskRow
-                    key={todo.id}
-                    todo={todo}
-                    onSelect={onSelectTask}
-                    onDelete={onDeleteTask}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+          <Card key={section.key}>
+            <CardHeader>
+              <CardTitle>{section.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {tasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No tasks</p>
+              ) : (
+                <div className="grid gap-2">
+                  {tasks.map((todo) => (
+                    <TaskRow
+                      key={todo.id}
+                      todo={todo}
+                      onSelect={onSelectTask}
+                      onDelete={onDeleteTask}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         );
       })}
     </div>

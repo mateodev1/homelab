@@ -1,9 +1,13 @@
 import { useAuth0 } from '@auth0/auth0-react';
+import { CheckSquare, Moon, Sun, X } from 'lucide-react';
 import { useState } from 'react';
 import { LoginButton } from './components/LoginButton';
 import { LogoutButton } from './components/LogoutButton';
 import { TaskForm } from './components/TaskForm';
 import { TaskList } from './components/TaskList';
+import { Avatar, AvatarImage } from './components/ui/avatar';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
 import { useTheme } from './context/ThemeContext';
 import { useTodos } from './hooks/useTodos';
 
@@ -25,55 +29,52 @@ function App() {
     editingTodoID == null ? null : (todos.find((todo) => todo.id === editingTodoID) ?? null);
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="app-header__logo">
-          <span className="app-header__logo-icon">✅</span>
-          <span className="app-header__logo-text">Tasks</span>
+    <div className="flex min-h-screen flex-col">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-background px-4">
+        <div className="flex shrink-0 items-center gap-2">
+          <CheckSquare aria-hidden="true" className="size-5 text-foreground" />
+          <span className="text-base font-medium tracking-tight text-foreground">Tasks</span>
         </div>
-        <div className="app-header__search">
-          <span className="app-header__search-icon">🔍</span>
-          <input
-            className="app-header__search-input"
+
+        <div className="relative flex-1 max-w-xl">
+          <Input
             type="search"
             placeholder="Search tasks"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="Search tasks"
+            className="pl-3 pr-8"
           />
           {query && (
-            <button
+            <Button
               type="button"
-              className="app-header__search-clear"
+              variant="ghost"
+              size="icon"
               onClick={() => setQuery('')}
               aria-label="Clear search"
+              className="absolute right-0.5 top-0.5 h-8 w-8"
             >
-              ✕
-            </button>
+              <X aria-hidden="true" className="size-4" />
+            </Button>
           )}
         </div>
-        <button
+
+        <Button
           type="button"
-          className="app-header__theme-toggle"
+          variant="ghost"
+          size="icon"
           onClick={toggle}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+          {theme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+        </Button>
+
         {isAuthenticated ? (
           <>
             {user?.picture && (
-              <img
-                src={user.picture}
-                alt={user.name ?? 'User'}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '1px solid var(--color-border)',
-                }}
-              />
+              <Avatar>
+                <AvatarImage src={user.picture} alt={user.name ?? 'User'} />
+              </Avatar>
             )}
             <LogoutButton />
           </>
@@ -82,7 +83,7 @@ function App() {
         )}
       </header>
 
-      <main className="app-main app-main--tasks">
+      <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6">
         <TaskForm
           todo={editingTodo}
           onCreate={addTodo}

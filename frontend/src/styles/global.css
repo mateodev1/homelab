@@ -1,689 +1,124 @@
-/* ===== 1. Theme tokens    ===== */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ===== 1. Theme tokens (shadcn/ui convention, Vercel-inspired) ===== */
 :root {
-  --color-bg: #f8f9fa;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f1f3f4;
-  --color-border: #e0e0e0;
-  --color-text-primary: #202124;
-  --color-text-muted: #5f6368;
-  --color-text-subtle: #80868b;
-  --color-accent: #1a73e8;
-  --color-error: #d93025;
-  --color-spinner-track: #e0e0e0;
-  --color-hover-overlay: rgba(0, 0, 0, 0.06);
-  --color-hover-icon: rgba(0, 0, 0, 0.08);
+  --radius: 0.5rem;
+
+  --background: #ffffff;
+  --foreground: #09090b;
+
+  --card: #ffffff;
+  --card-foreground: #09090b;
+
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
 }
 
 [data-theme="dark"] {
-  --color-bg: #202124;
-  --color-surface: #2d2e30;
-  --color-surface-alt: #303134;
-  --color-border: #5f6368;
-  --color-text-primary: #e8eaed;
-  --color-text-muted: #9aa0a6;
-  --color-text-subtle: #9aa0a6;
-  --color-accent: #8ab4f8;
-  --color-error: #f28b82;
-  --color-spinner-track: #5f6368;
-  --color-hover-overlay: rgba(255, 255, 255, 0.06);
-  --color-hover-icon: rgba(255, 255, 255, 0.08);
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+
+  --card: #111113;
+  --card-foreground: #fafafa;
+
+  --popover: #111113;
+  --popover-foreground: #fafafa;
+
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+
+  --secondary: #18181b;
+  --secondary-foreground: #fafafa;
+
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #1f1f23;
+  --accent-foreground: #fafafa;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #52525b;
 }
 
-/* ===== 2. Reset & Base    ===== */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ===== 2. Base ===== */
+* {
+  border-color: var(--border);
 }
 
 body {
-  font-family: "Google Sans", Roboto, Arial, sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text-primary);
+  background-color: var(--background);
+  color: var(--foreground);
   min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
 }
 
-button {
-  cursor: pointer;
-  border: none;
-  background: none;
-  font-family: inherit;
-}
-
-textarea,
-input {
-  font-family: inherit;
-  border: none;
-  outline: none;
-  resize: none;
-}
-
-/* ===== 3. App Layout      ===== */
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.app-main {
-  padding: 24px 16px 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* ===== 4. Header          ===== */
-.app-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  height: 64px;
-}
-
-.app-header__logo {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.app-header__logo-icon {
-  font-size: 24px;
-}
-
-.app-header__logo-text {
-  font-size: 22px;
-  font-weight: 400;
-  color: var(--color-text-muted);
-  letter-spacing: -0.5px;
-}
-
-.app-header__search {
-  flex: 1;
-  max-width: 720px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  background: var(--color-surface-alt);
-  border-radius: 24px;
-  padding: 8px 16px;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-
-.app-header__search:focus-within {
-  background: var(--color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.app-header__search-icon {
-  font-size: 18px;
-  margin-right: 12px;
-  color: var(--color-text-muted);
-}
-
-.app-header__search-input {
-  flex: 1;
-  background: transparent;
-  font-size: 16px;
-  color: var(--color-text-primary);
-}
-
-.app-header__search-input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.app-header__search-input::-webkit-search-cancel-button {
-  display: none;
-}
-
-.app-header__search-clear {
-  color: var(--color-text-muted);
-  font-size: 16px;
-  padding: 2px 4px;
-  border-radius: 50%;
-  transition: background 0.15s;
-}
-
-.app-header__search-clear:hover {
-  background: var(--color-hover-overlay);
-}
-
-.app-header__theme-toggle {
-  font-size: 20px;
-  padding: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.app-header__theme-toggle:hover {
-  background: var(--color-hover-icon);
-}
-
-/* ===== 5. NoteForm        ===== */
-.note-form {
-  max-width: 600px;
-  margin: 0 auto 32px;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s;
-  overflow: visible;
-}
-
-.note-form:focus-within {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.12);
-}
-
-.note-form__title {
-  width: 100%;
-  padding: 12px 16px 8px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: transparent;
-  border-bottom: 1px solid var(--color-hover-icon);
-}
-
-.note-form__title::placeholder {
-  color: var(--color-text-subtle);
-}
-
-.note-form__body-row {
-  padding: 8px 16px;
-}
-
-.note-form__placeholder {
-  width: 100%;
-  text-align: left;
-  padding: 4px 0;
-  font-size: 15px;
-  color: var(--color-text-subtle);
-  background: transparent;
-}
-
-.note-form__body {
-  width: 100%;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  background: transparent;
-  min-height: 60px;
-  line-height: 1.5;
-}
-
-.note-form__body::placeholder {
-  color: var(--color-text-subtle);
-}
-
-.note-form__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px 8px;
-}
-
-.note-form__color-picker-wrapper {
-  position: relative;
-}
-
-.note-form__icon-btn {
-  font-size: 18px;
-  padding: 6px;
-  border-radius: 50%;
-  color: var(--color-text-muted);
-  transition: background 0.15s;
-}
-
-.note-form__icon-btn:hover {
-  background: var(--color-hover-overlay);
-}
-
-.note-form__close-btn {
-  padding: 8px 20px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  transition: background 0.15s;
-}
-
-.note-form__close-btn:hover {
-  background: var(--color-hover-overlay);
-}
-
-/* ===== 6. Color Picker    ===== */
-.color-picker-popup {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  z-index: 200;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 8px;
-  background: var(--color-surface);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  width: 200px;
-}
-
-.color-swatch {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  transition: transform 0.1s, border-color 0.1s;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
-}
-
-.color-swatch:hover {
-  transform: scale(1.15);
-}
-
-.color-swatch--active {
-  border-color: var(--color-accent);
-  transform: scale(1.1);
-}
-
-/* ===== 7. NoteGrid        ===== */
-.note-grid {
-  padding-top: 8px;
-}
-
-.note-grid__section {
-  margin-bottom: 24px;
-}
-
-.note-grid__section-label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.8px;
-  color: var(--color-text-muted);
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-
-.note-grid__masonry {
-  columns: 1;
-  column-gap: 16px;
-}
-
-@media (min-width: 480px) {
-  .note-grid__masonry {
-    columns: 2;
-  }
-}
-
-@media (min-width: 768px) {
-  .note-grid__masonry {
-    columns: 3;
-  }
-}
-
-@media (min-width: 1100px) {
-  .note-grid__masonry {
-    columns: 4;
-  }
-}
-
-.note-grid__status {
-  display: flex;
-  justify-content: center;
-  padding: 48px;
-}
-
-.note-grid__status--error {
-  color: var(--color-error);
-}
-
-.note-grid__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 16px;
-  gap: 16px;
-  color: var(--color-text-muted);
-}
-
-.note-grid__empty-icon {
-  font-size: 80px;
-  opacity: 0.15;
-}
-
-.note-grid__empty p {
-  font-size: 16px;
-}
-
-/* ===== 8. NoteCard        ===== */
-.note-card {
-  break-inside: avoid;
-  display: inline-block;
-  width: 100%;
-  margin-bottom: 16px;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.2s;
-  position: relative;
-  overflow: visible;
-}
-
-.note-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-}
-
-.note-card--done .note-card__title,
-.note-card--done .note-card__body {
-  opacity: 0.5;
-  text-decoration: line-through;
-}
-
-/* Top actions (pin) — visible on hover */
-.note-card__actions-top {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.note-card:hover .note-card__actions-top {
-  opacity: 1;
-}
-
-.note-card__pin {
-  font-size: 16px;
-  padding: 4px;
-  border-radius: 50%;
-  color: var(--color-text-muted);
-  transition: background 0.15s, transform 0.15s;
-}
-
-.note-card__pin:hover {
-  background: var(--color-hover-icon);
-}
-
-.note-card__pin--active {
-  opacity: 1 !important;
-  filter: none;
-}
-
-.note-card__title {
-  padding: 12px 36px 4px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  cursor: text;
-  word-break: break-word;
-  min-height: 24px;
-}
-
-.note-card__title-input {
-  width: 100%;
-  padding: 12px 36px 4px 16px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: transparent;
-  word-break: break-word;
-}
-
-.note-card__body {
-  padding: 4px 16px 8px;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  cursor: text;
-  word-break: break-word;
-  line-height: 1.5;
-  min-height: 20px;
-}
-
-.note-card__body--empty {
-  color: var(--color-text-subtle);
-  font-style: italic;
-}
-
-.note-card__body-input {
-  width: 100%;
-  padding: 4px 16px 8px;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  background: transparent;
-  line-height: 1.5;
-  min-height: 60px;
-}
-
-.note-card__footer {
-  padding: 4px 8px 6px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.note-card:hover .note-card__footer {
-  opacity: 1;
-}
-
-.note-card__footer-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.note-card__check {
-  font-size: 16px;
-  padding: 6px;
-  border-radius: 50%;
-  color: var(--color-text-muted);
-  transition: background 0.15s;
-}
-
-.note-card__check:hover {
-  background: var(--color-hover-icon);
-}
-
-.note-card__check--done {
-  color: var(--color-accent);
-}
-
-.note-card__color-picker-wrapper {
-  position: relative;
-}
-
-.note-card__color-btn {
-  font-size: 16px;
-  padding: 6px;
-  border-radius: 50%;
-  color: var(--color-text-muted);
-  transition: background 0.15s;
-}
-
-.note-card__color-btn:hover {
-  background: var(--color-hover-icon);
-}
-
-.note-card__delete {
-  font-size: 16px;
-  padding: 6px;
-  border-radius: 50%;
-  color: var(--color-text-muted);
-  margin-left: auto;
-  transition: background 0.15s;
-}
-
-.note-card__delete:hover {
-  background: var(--color-hover-icon);
-  color: var(--color-error);
-}
-
-/* ===== 9. Spinner         ===== */
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--color-spinner-track);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.app-main--tasks {
-  display: grid;
-  gap: 24px;
-}
-
-.task-form {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.task-form__title {
-  font-size: 18px;
-}
-
-.task-form__input {
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 10px;
-  color: var(--color-text-primary);
-}
-
-.task-form__row {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.task-form__label {
-  display: grid;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--color-text-muted);
-}
-
-.task-form__label select,
-.task-form__label input,
-.task-form__fallback {
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px;
-  color: var(--color-text-primary);
-  background: var(--color-surface);
-}
-
-.task-form__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.task-form__actions button {
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-
-.task-list {
-  display: grid;
-  gap: 16px;
-}
-
-.task-list__section {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--color-surface);
-}
-
-.task-list__section-title {
-  margin-bottom: 10px;
-}
-
-.task-list__rows {
-  display: grid;
-  gap: 8px;
-}
-
-.task-list__empty {
-  color: var(--color-text-muted);
-}
-
-.task-list__status {
-  display: flex;
-  justify-content: center;
-  padding: 32px;
-}
-
-.task-list__status--error {
-  color: var(--color-error);
-}
-
-.task-row {
-  display: flex;
-  gap: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 10px;
-}
-
-.task-row__content {
-  flex: 1;
-  text-align: left;
-}
-
-.task-row__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.task-row__chips {
-  display: flex;
-  gap: 6px;
-}
-
-.task-row__due-date {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin-top: 6px;
-}
-
-.task-row__preview {
-  margin-top: 8px;
-  color: var(--color-text-primary);
-  line-height: 1.4;
+/* ===== 3. Task preview clamp (kept: no Tailwind core utility for 2-line clamp) ===== */
+.task-row-preview-clamp {
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   overflow: hidden;
-}
-
-.task-row__preview--empty {
-  color: var(--color-text-subtle);
-}
-
-.task-row__delete {
-  align-self: flex-start;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: var(--color-surface-alt);
-  color: var(--color-text-primary);
 }

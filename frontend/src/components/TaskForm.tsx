@@ -1,5 +1,11 @@
 import { type FormEvent, Suspense, lazy, useEffect, useState } from 'react';
 import type { Todo, TodoStatus } from '../types/todo';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select } from './ui/select';
+import { Textarea } from './ui/textarea';
 
 const MDEditor = lazy(async () => {
   const mod = await import('@uiw/react-md-editor');
@@ -74,76 +80,83 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
   };
 
   return (
-    <form className="task-form" onSubmit={handleSubmit}>
-      <h2 className="task-form__title">{isEditing ? 'Edit task' : 'Create task'}</h2>
+    <Card>
+      <form onSubmit={handleSubmit}>
+        <CardHeader>
+          <CardTitle className="text-base">{isEditing ? 'Edit task' : 'Create task'}</CardTitle>
+        </CardHeader>
 
-      <input
-        className="task-form__input"
-        type="text"
-        placeholder="Task title"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-      />
+        <CardContent>
+          <Input
+            type="text"
+            placeholder="Task title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
 
-      <div className="task-form__row">
-        <label className="task-form__label">
-          Priority
-          <select
-            value={priority}
-            onChange={(event) => setPriority(Number(event.target.value) as 0 | 1 | 2 | 3)}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Label className="flex-col items-stretch gap-1.5">
+              Priority
+              <Select
+                value={priority}
+                onChange={(event) => setPriority(Number(event.target.value) as 0 | 1 | 2 | 3)}
+              >
+                <option value={0}>None</option>
+                <option value={1}>Low</option>
+                <option value={2}>Medium</option>
+                <option value={3}>High</option>
+              </Select>
+            </Label>
+
+            <Label className="flex-col items-stretch gap-1.5">
+              Due date
+              <Input
+                type="date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+              />
+            </Label>
+
+            <Label className="flex-col items-stretch gap-1.5">
+              Status
+              <Select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as TodoStatus)}
+              >
+                <option value="todo">Todo</option>
+                <option value="in_progress">In progress</option>
+                <option value="done">Done</option>
+                <option value="cancelled">Cancelled</option>
+              </Select>
+            </Label>
+          </div>
+
+          <Suspense
+            fallback={
+              <Textarea value={body} onChange={(event) => setBody(event.target.value)} rows={8} />
+            }
           >
-            <option value={0}>None</option>
-            <option value={1}>Low</option>
-            <option value={2}>Medium</option>
-            <option value={3}>High</option>
-          </select>
-        </label>
+            <div data-color-mode="light">
+              <MDEditor
+                value={body}
+                onChange={(value) => setBody(value ?? '')}
+                preview="edit"
+                height={240}
+                textareaProps={{ placeholder: 'Write markdown...' }}
+              />
+            </div>
+          </Suspense>
+        </CardContent>
 
-        <label className="task-form__label">
-          Due date
-          <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
-        </label>
-
-        <label className="task-form__label">
-          Status
-          <select value={status} onChange={(event) => setStatus(event.target.value as TodoStatus)}>
-            <option value="todo">Todo</option>
-            <option value="in_progress">In progress</option>
-            <option value="done">Done</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </label>
-      </div>
-
-      <Suspense
-        fallback={
-          <textarea
-            className="task-form__fallback"
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            rows={8}
-          />
-        }
-      >
-        <div data-color-mode="light">
-          <MDEditor
-            value={body}
-            onChange={(value) => setBody(value ?? '')}
-            preview="edit"
-            height={240}
-            textareaProps={{ placeholder: 'Write markdown...' }}
-          />
+        <div className="flex justify-end gap-2 p-4 pt-0">
+          {isEditing ? (
+            <Button type="button" variant="outline" onClick={onCancelEdit}>
+              Cancel
+            </Button>
+          ) : null}
+          <Button type="submit">{isEditing ? 'Update task' : 'Add task'}</Button>
         </div>
-      </Suspense>
-
-      <div className="task-form__actions">
-        {isEditing ? (
-          <button type="button" onClick={onCancelEdit}>
-            Cancel
-          </button>
-        ) : null}
-        <button type="submit">{isEditing ? 'Update task' : 'Add task'}</button>
-      </div>
-    </form>
+      </form>
+    </Card>
   );
 }
