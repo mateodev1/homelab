@@ -31,13 +31,16 @@ func newTestServer(t *testing.T) (*httptest.Server, func()) {
 
 	todoStore := store.New(db)
 	todoSvc := service.NewTodoService(todoStore)
+	projectSvc := service.NewProjectService(todoStore)
 
 	checker := &dbHealthChecker{db: db}
 
 	mux := http.NewServeMux()
 	todoHandler := handler.NewTodoHandler(todoSvc)
+	projectHandler := handler.NewProjectHandler(projectSvc)
 	healthHandler := handler.NewHealthHandler(checker)
 	todoHandler.Register(mux)
+	projectHandler.Register(mux)
 	healthHandler.Register(mux)
 
 	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(mux)))

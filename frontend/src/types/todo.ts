@@ -12,6 +12,7 @@ export interface Todo {
   due_date: string | null;
   kind: TodoKind;
   issue_type: IssueType | null;
+  project_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export interface CreateTodoPayload {
   due_date?: string | null;
   kind?: TodoKind;
   issue_type?: IssueType | null;
+  project_id?: number | null;
 }
 
 export interface UpdateTodoPayload {
@@ -33,6 +35,7 @@ export interface UpdateTodoPayload {
   due_date?: string | null;
   kind?: TodoKind;
   issue_type?: IssueType | null;
+  project_id?: number | null;
 }
 
 export class ApiError extends Error {

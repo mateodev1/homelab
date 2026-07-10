@@ -1,12 +1,15 @@
 import { cn } from '@/lib/utils';
 import { useAuth0 } from '@auth0/auth0-react';
-import { CheckSquare, Moon, Plus, Sun } from 'lucide-react';
+import { CheckSquare, Moon, Plus, Sun, Trash2 } from 'lucide-react';
+import { type FormEvent, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import type { Project } from '../types/project';
 import type { TodoKind, TodoStatus } from '../types/todo';
 import { LoginButton } from './LoginButton';
 import { LogoutButton } from './LogoutButton';
 import { Avatar, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 export type TaskView = 'all' | TodoStatus | TodoKind;
 
@@ -33,11 +36,37 @@ interface SidebarProps {
   onSelectView: (view: TaskView) => void;
   counts: Record<TaskView, number>;
   onCreateTask: () => void;
+  projects: Project[];
+  activeProjectId: number | null;
+  onSelectProject: (id: number | null) => void;
+  projectCounts: Record<number, number>;
+  onCreateProject: (name: string) => void;
+  onDeleteProject: (id: number) => void;
 }
 
-export function Sidebar({ activeView, onSelectView, counts, onCreateTask }: SidebarProps) {
+export function Sidebar({
+  activeView,
+  onSelectView,
+  counts,
+  onCreateTask,
+  projects,
+  activeProjectId,
+  onSelectProject,
+  projectCounts,
+  onCreateProject,
+  onDeleteProject,
+}: SidebarProps) {
   const { theme, toggle } = useTheme();
   const { isAuthenticated, user } = useAuth0();
+  const [newProjectName, setNewProjectName] = useState('');
+
+  const handleCreateProject = (event: FormEvent) => {
+    event.preventDefault();
+    const name = newProjectName.trim();
+    if (!name) return;
+    onCreateProject(name);
+    setNewProjectName('');
+  };
 
   return (
     <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-border bg-secondary/40">
@@ -108,6 +137,76 @@ export function Sidebar({ activeView, onSelectView, counts, onCreateTask }: Side
             </li>
           ))}
         </ul>
+
+        <p className="mt-3 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Projects
+        </p>
+        <ul className="mt-1 grid gap-0.5">
+          <li>
+            <button
+              type="button"
+              onClick={() => onSelectProject(null)}
+              aria-current={activeProjectId === null ? 'true' : undefined}
+              className={cn(
+                'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors',
+                activeProjectId === null
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-foreground hover:bg-accent/60',
+              )}
+            >
+              <span>All projects</span>
+            </button>
+          </li>
+          {projects.map((project) => (
+            <li key={project.id} className="group flex items-center">
+              <button
+                type="button"
+                onClick={() => onSelectProject(project.id)}
+                aria-current={activeProjectId === project.id ? 'true' : undefined}
+                className={cn(
+                  'flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+                  activeProjectId === project.id
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-foreground hover:bg-accent/60',
+                )}
+              >
+                <span className="flex min-w-0 items-center gap-1.5 truncate">
+                  <span
+                    aria-hidden="true"
+                    className="size-2 shrink-0 rounded-full"
+                    style={{
+                      backgroundColor: project.color === 'default' ? '#94a3b8' : project.color,
+                    }}
+                  />
+                  <span className="truncate">{project.name}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {projectCounts[project.id] ?? 0}
+                </span>
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => onDeleteProject(project.id)}
+                aria-label={`Delete ${project.name}`}
+                className="size-6 shrink-0 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+              >
+                <Trash2 aria-hidden="true" className="size-3" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={handleCreateProject} className="mt-1 px-2">
+          <Input
+            type="text"
+            placeholder="New project"
+            value={newProjectName}
+            onChange={(event) => setNewProjectName(event.target.value)}
+            aria-label="New project name"
+            className="h-7 text-sm"
+          />
+        </form>
       </nav>
 
       <div className="flex items-center gap-2 border-t border-border px-3 py-2">

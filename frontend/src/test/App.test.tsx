@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { ThemeProvider } from '../context/ThemeContext';
+import { useProjects } from '../hooks/useProjects';
 import { useTodos } from '../hooks/useTodos';
 import type { Todo } from '../types/todo';
 
@@ -16,11 +17,16 @@ vi.mock('../hooks/useTodos', () => ({
   useTodos: vi.fn(),
 }));
 
+vi.mock('../hooks/useProjects', () => ({
+  useProjects: vi.fn(),
+}));
+
 vi.mock('@uiw/react-md-editor', () => ({
   default: () => <div>Markdown editor</div>,
 }));
 
 const mockedUseTodos = vi.mocked(useTodos);
+const mockedUseProjects = vi.mocked(useProjects);
 
 const mockHookBase = {
   loading: false,
@@ -40,6 +46,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     due_date: null,
     kind: 'note',
     issue_type: null,
+    project_id: null,
     created_at: '2026-06-21T03:00:00Z',
     updated_at: '2026-06-21T03:00:00Z',
     ...overrides,
@@ -67,6 +74,14 @@ function mockTodos(todos: Todo[], overrides: Partial<typeof mockHookBase> = {}) 
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedUseProjects.mockReturnValue({
+      projects: [],
+      loading: false,
+      error: null,
+      addProject: vi.fn(),
+      editProject: vi.fn(),
+      removeProject: vi.fn(),
+    });
   });
 
   it('renders the search input and task list using hook state', () => {

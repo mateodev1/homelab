@@ -7,12 +7,15 @@ import { Button } from './components/ui/button';
 import { Dialog, DialogContent } from './components/ui/dialog';
 import { Input } from './components/ui/input';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useProjects } from './hooks/useProjects';
 import { useTodos } from './hooks/useTodos';
 
 function App() {
   const { todos, groupedTodos, loading, error, addTodo, editTodo, removeTodo } = useTodos();
+  const { projects, addProject, removeProject } = useProjects();
   const [query, setQuery] = useState('');
   const [activeView, setActiveView] = useState<TaskView>('all');
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTodoID, setEditingTodoID] = useState<number | null>(null);
@@ -33,12 +36,30 @@ function App() {
     return groupedTodos[activeView];
   }, [activeView, groupedTodos, todos]);
 
-  const filteredTasks = useMemo(() => viewTasks.filter(matchesQuery(query)), [viewTasks, query]);
+  const projectFilteredTasks = useMemo(() => {
+    if (activeProjectId === null) return viewTasks;
+    return viewTasks.filter((todo) => todo.project_id === activeProjectId);
+  }, [viewTasks, activeProjectId]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset the active row when the view or search query changes
+  const filteredTasks = useMemo(
+    () => projectFilteredTasks.filter(matchesQuery(query)),
+    [projectFilteredTasks, query],
+  );
+
+  const projectCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const todo of todos) {
+      if (todo.project_id != null) {
+        counts[todo.project_id] = (counts[todo.project_id] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [todos]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset the active row when the view, project or search query changes
   useEffect(() => {
     setActiveIndex(0);
-  }, [activeView, query]);
+  }, [activeView, activeProjectId, query]);
 
   const counts: Record<TaskView, number> = {
     all: todos.length,
@@ -98,6 +119,15 @@ function App() {
         onSelectView={setActiveView}
         counts={counts}
         onCreateTask={openCreate}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={setActiveProjectId}
+        projectCounts={projectCounts}
+        onCreateProject={(name) => void addProject(name)}
+        onDeleteProject={(id) => {
+          if (activeProjectId === id) setActiveProjectId(null);
+          void removeProject(id);
+        }}
       />
 
       <main className="flex flex-1 flex-col overflow-hidden">
@@ -135,6 +165,7 @@ function App() {
         <div className="flex-1 overflow-y-auto">
           <TaskList
             tasks={filteredTasks}
+            projects={projects}
             loading={loading}
             error={error}
             activeIndex={activeIndex}
@@ -151,8 +182,9 @@ function App() {
         <DialogContent label={editingTodo ? 'Edit task' : 'Create task'}>
           <TaskForm
             todo={editingTodo}
-            onCreate={async (title, body, priority, dueDate, kind, issueType) => {
-              await addTodo(title, body, priority, dueDate, kind, issueType);
+            projects={projects}
+            onCreate={async (title, body, priority, dueDate, kind, issueType, projectId) => {
+              await addTodo(title, body, priority, dueDate, kind, issueType, projectId);
               closeDialog();
             }}
             onUpdate={async (id, changes) => {

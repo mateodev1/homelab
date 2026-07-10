@@ -11,6 +11,7 @@ import {
   StickyNote,
   Trash2,
 } from 'lucide-react';
+import type { Project } from '../types/project';
 import type { Todo } from '../types/todo';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -84,6 +85,7 @@ const ISSUE_TYPE_LABEL: Record<NonNullable<Todo['issue_type']>, string> = {
 
 interface TaskRowProps {
   todo: Todo;
+  project: Project | null;
   active?: boolean;
   onSelect: (id: number) => void;
   onDelete: (id: number) => void;
@@ -113,7 +115,7 @@ function formatRelativeDate(dateText: string): string {
   return rtf.format(deltaDays, 'day');
 }
 
-export function TaskRow({ todo, active = false, onSelect, onDelete }: TaskRowProps) {
+export function TaskRow({ todo, project, active = false, onSelect, onDelete }: TaskRowProps) {
   const StatusIcon = STATUS_ICON[todo.status];
   const KindIcon = KIND_ICON[todo.kind];
   const IssueTypeIcon = todo.issue_type ? ISSUE_TYPE_ICON[todo.issue_type] : null;
@@ -156,6 +158,17 @@ export function TaskRow({ todo, active = false, onSelect, onDelete }: TaskRowPro
           <Badge variant={ISSUE_TYPE_BADGE_VARIANT[todo.issue_type]} className="shrink-0 gap-1">
             <IssueTypeIcon aria-hidden="true" className="size-3" />
             {ISSUE_TYPE_LABEL[todo.issue_type]}
+          </Badge>
+        ) : null}
+
+        {project ? (
+          <Badge variant="outline" className="shrink-0 gap-1.5 normal-case">
+            <span
+              aria-hidden="true"
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: project.color === 'default' ? '#94a3b8' : project.color }}
+            />
+            {project.name}
           </Badge>
         ) : null}
 

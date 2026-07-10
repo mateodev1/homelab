@@ -22,11 +22,15 @@ interface UseTodosReturn {
     dueDate?: string | null,
     kind?: TodoKind,
     issueType?: IssueType | null,
+    projectId?: number | null,
   ) => Promise<void>;
   editTodo: (
     id: number,
     changes: Partial<
-      Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type'>
+      Pick<
+        Todo,
+        'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type' | 'project_id'
+      >
     >,
   ) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
@@ -96,6 +100,7 @@ export function useTodos(): UseTodosReturn {
     dueDate: string | null = null,
     kind: TodoKind = 'note',
     issueType: IssueType | null = null,
+    projectId: number | null = null,
   ) => {
     try {
       setError(null);
@@ -107,6 +112,7 @@ export function useTodos(): UseTodosReturn {
         due_date: dueDate,
         kind,
         issue_type: issueType,
+        project_id: projectId,
       });
       setTodos((current) => [...current, created]);
     } catch (err) {
@@ -117,7 +123,10 @@ export function useTodos(): UseTodosReturn {
   const editTodo = async (
     id: number,
     changes: Partial<
-      Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type'>
+      Pick<
+        Todo,
+        'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type' | 'project_id'
+      >
     >,
   ) => {
     const currentTodo = todos.find((todo) => todo.id === id);
@@ -135,6 +144,7 @@ export function useTodos(): UseTodosReturn {
         due_date: merged.due_date,
         kind: merged.kind,
         issue_type: merged.issue_type,
+        project_id: merged.project_id,
       });
       setTodos((current) => current.map((todo) => (todo.id === id ? updated : todo)));
     } catch (err) {

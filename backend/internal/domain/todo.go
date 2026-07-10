@@ -54,6 +54,7 @@ type Todo struct {
 	DueDate   *string
 	Kind      string
 	IssueType *string
+	ProjectID *int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

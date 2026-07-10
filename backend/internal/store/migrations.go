@@ -16,7 +16,18 @@ CREATE TABLE IF NOT EXISTS todos (
 	created_at TEXT    NOT NULL
 );`
 
+	const projectsSchema = `
+CREATE TABLE IF NOT EXISTS projects (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	name       TEXT    NOT NULL UNIQUE,
+	color      TEXT    NOT NULL DEFAULT 'default',
+	created_at TEXT    NOT NULL
+);`
+
 	if _, err := db.Exec(schema); err != nil {
+		return err
+	}
+	if _, err := db.Exec(projectsSchema); err != nil {
 		return err
 	}
 
@@ -30,6 +41,7 @@ CREATE TABLE IF NOT EXISTS todos (
 		`ALTER TABLE todos ADD COLUMN due_date   TEXT    NULL`,
 		`ALTER TABLE todos ADD COLUMN kind       TEXT    NOT NULL DEFAULT 'note'`,
 		`ALTER TABLE todos ADD COLUMN issue_type TEXT    NULL`,
+		`ALTER TABLE todos ADD COLUMN project_id INTEGER NULL`,
 	}
 
 	for _, stmt := range alterations {

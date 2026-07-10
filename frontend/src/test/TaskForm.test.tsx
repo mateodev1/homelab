@@ -23,6 +23,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     due_date: '2026-07-01',
     kind: 'note',
     issue_type: null,
+    project_id: null,
     created_at: '2026-06-20T10:00:00Z',
     updated_at: '2026-06-20T10:00:00Z',
     ...overrides,
@@ -33,7 +34,15 @@ describe('TaskForm', () => {
   it('creates a task with markdown body', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
 
-    render(<TaskForm todo={null} onCreate={onCreate} onUpdate={vi.fn()} onCancelEdit={vi.fn()} />);
+    render(
+      <TaskForm
+        todo={null}
+        projects={[]}
+        onCreate={onCreate}
+        onUpdate={vi.fn()}
+        onCancelEdit={vi.fn()}
+      />,
+    );
 
     fireEvent.change(screen.getByPlaceholderText('Task title'), { target: { value: 'New task' } });
 
@@ -61,6 +70,7 @@ describe('TaskForm', () => {
         '2026-07-02',
         'note',
         null,
+        null,
       );
     });
   });
@@ -68,7 +78,15 @@ describe('TaskForm', () => {
   it('creates an issue with an issue type', async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
 
-    render(<TaskForm todo={null} onCreate={onCreate} onUpdate={vi.fn()} onCancelEdit={vi.fn()} />);
+    render(
+      <TaskForm
+        todo={null}
+        projects={[]}
+        onCreate={onCreate}
+        onUpdate={vi.fn()}
+        onCancelEdit={vi.fn()}
+      />,
+    );
 
     fireEvent.change(screen.getByPlaceholderText('Task title'), {
       target: { value: 'Fix bug' },
@@ -79,12 +97,20 @@ describe('TaskForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
 
     await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith('Fix bug', '', 0, null, 'issue', 'bug');
+      expect(onCreate).toHaveBeenCalledWith('Fix bug', '', 0, null, 'issue', 'bug', null);
     });
   });
 
   it('hides the issue type selector when kind is note', () => {
-    render(<TaskForm todo={null} onCreate={vi.fn()} onUpdate={vi.fn()} onCancelEdit={vi.fn()} />);
+    render(
+      <TaskForm
+        todo={null}
+        projects={[]}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onCancelEdit={vi.fn()}
+      />,
+    );
 
     expect(screen.queryByLabelText('Issue type')).not.toBeInTheDocument();
 
@@ -102,6 +128,7 @@ describe('TaskForm', () => {
     render(
       <TaskForm
         todo={makeTodo()}
+        projects={[]}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
         onCancelEdit={onCancelEdit}
@@ -124,6 +151,7 @@ describe('TaskForm', () => {
         due_date: '2026-07-01',
         kind: 'note',
         issue_type: null,
+        project_id: null,
       });
     });
 

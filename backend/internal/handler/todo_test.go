@@ -21,7 +21,7 @@ type mockTodoService struct {
 	err   error
 }
 
-func (m *mockTodoService) CreateTodo(_ context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, createdAt time.Time) (*domain.Todo, error) {
+func (m *mockTodoService) CreateTodo(_ context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, projectID *int64, createdAt time.Time) (*domain.Todo, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -37,6 +37,7 @@ func (m *mockTodoService) CreateTodo(_ context.Context, title, body string, prio
 		DueDate:   dueDate,
 		Kind:      kind,
 		IssueType: issueType,
+		ProjectID: projectID,
 		CreatedAt: createdAt,
 		UpdatedAt: createdAt,
 	}
@@ -92,6 +93,9 @@ func (m *mockTodoService) UpdateTodo(_ context.Context, id int64, patch service.
 		}
 		if patch.IssueType != nil {
 			t.IssueType = *patch.IssueType
+		}
+		if patch.ProjectID != nil {
+			t.ProjectID = *patch.ProjectID
 		}
 		if t.IssueType != nil && t.Kind != domain.TodoKindIssue {
 			return nil, fmt.Errorf("issue_type can only be set when kind is issue: %w", service.ErrValidation)

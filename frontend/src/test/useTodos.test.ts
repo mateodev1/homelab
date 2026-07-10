@@ -33,6 +33,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     due_date: null,
     kind: 'note',
     issue_type: null,
+    project_id: null,
     created_at: '2026-06-21T00:00:00Z',
     updated_at: '2026-06-21T00:00:00Z',
     ...overrides,
@@ -105,6 +106,7 @@ describe('useTodos', () => {
       due_date: '2026-07-01',
       kind: 'note',
       issue_type: null,
+      project_id: null,
     });
     expect(result.current.todos).toEqual([created]);
   });
@@ -139,6 +141,7 @@ describe('useTodos', () => {
       due_date: null,
       kind: 'note',
       issue_type: null,
+      project_id: null,
     });
     expect(result.current.todos).toEqual([updatedTodo]);
   });

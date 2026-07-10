@@ -13,6 +13,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     due_date: null,
     kind: 'note',
     issue_type: null,
+    project_id: null,
     created_at: '2026-06-21T03:00:00Z',
     updated_at: '2026-06-21T03:00:00Z',
     ...overrides,
@@ -24,6 +25,7 @@ describe('TaskList', () => {
     const { rerender } = render(
       <TaskList
         tasks={[]}
+        projects={[]}
         loading={true}
         error={null}
         activeIndex={0}
@@ -37,6 +39,7 @@ describe('TaskList', () => {
     rerender(
       <TaskList
         tasks={[]}
+        projects={[]}
         loading={false}
         error="boom"
         activeIndex={0}
@@ -51,6 +54,7 @@ describe('TaskList', () => {
     render(
       <TaskList
         tasks={[]}
+        projects={[]}
         loading={false}
         error={null}
         activeIndex={0}
@@ -73,6 +77,7 @@ describe('TaskList', () => {
           makeTodo({ id: 3, title: 'Done task', status: 'done' }),
           makeTodo({ id: 4, title: 'Cancelled task', status: 'cancelled' }),
         ]}
+        projects={[]}
         loading={false}
         error={null}
         activeIndex={1}

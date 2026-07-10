@@ -17,7 +17,7 @@ import (
 // Defined here to satisfy the dependency-inversion principle —
 // the handler package owns the interface it needs.
 type TodoServicer interface {
-	CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, createdAt time.Time) (*domain.Todo, error)
+	CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, projectID *int64, createdAt time.Time) (*domain.Todo, error)
 	ListTodos(ctx context.Context) ([]*domain.Todo, error)
 	GetTodo(ctx context.Context, id int64) (*domain.Todo, error)
 	UpdateTodo(ctx context.Context, id int64, patch service.TodoPatch) (*domain.Todo, error)
@@ -76,6 +76,7 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 
 	kindFilter := r.URL.Query().Get("kind")
 	issueTypeFilter := r.URL.Query().Get("issue_type")
+	projectFilter := r.URL.Query().Get("project_id")
 	if kindFilter != "" {
 		filtered := make([]*domain.Todo, 0, len(todos))
 		for _, t := range todos {
@@ -90,6 +91,23 @@ func (h *TodoHandler) ListTodos(w http.ResponseWriter, r *http.Request) {
 		for _, t := range todos {
 			if t.IssueType != nil && *t.IssueType == issueTypeFilter {
 				filtered = append(filtered, t)
+			}
+		}
+		todos = filtered
+	}
+	if projectFilter != "" {
+		filtered := make([]*domain.Todo, 0, len(todos))
+		if projectFilter == "none" {
+			for _, t := range todos {
+				if t.ProjectID == nil {
+					filtered = append(filtered, t)
+				}
+			}
+		} else if projectID, err := strconv.ParseInt(projectFilter, 10, 64); err == nil {
+			for _, t := range todos {
+				if t.ProjectID != nil && *t.ProjectID == projectID {
+					filtered = append(filtered, t)
+				}
 			}
 		}
 		todos = filtered
@@ -112,6 +130,7 @@ func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		DueDate   *string `json:"due_date"`
 		Kind      string  `json:"kind"`
 		IssueType *string `json:"issue_type"`
+		ProjectID *int64  `json:"project_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -144,7 +163,7 @@ func (h *TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Priority, req.DueDate, req.Kind, req.IssueType, time.Now())
+	todo, err := h.svc.CreateTodo(r.Context(), req.Title, req.Body, req.Priority, req.DueDate, req.Kind, req.IssueType, req.ProjectID, time.Now())
 	if err != nil {
 		jsonError(w, "failed to create todo", http.StatusInternalServerError)
 		return
@@ -191,6 +210,7 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		DueDate   **string `json:"due_date"`
 		Kind      *string  `json:"kind"`
 		IssueType **string `json:"issue_type"`
+		ProjectID **int64  `json:"project_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
@@ -225,6 +245,7 @@ func (h *TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		DueDate:   req.DueDate,
 		Kind:      req.Kind,
 		IssueType: req.IssueType,
+		ProjectID: req.ProjectID,
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -286,6 +307,7 @@ func todoResponse(t *domain.Todo) map[string]any {
 		"due_date":   t.DueDate,
 		"kind":       t.Kind,
 		"issue_type": t.IssueType,
+		"project_id": t.ProjectID,
 		"created_at": t.CreatedAt.Format(time.RFC3339),
 		"updated_at": t.UpdatedAt.Format(time.RFC3339),
 	}

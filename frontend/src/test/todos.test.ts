@@ -14,6 +14,7 @@ function makeTodo(overrides: Partial<Todo> = {}): Todo {
     due_date: null,
     kind: 'note',
     issue_type: null,
+    project_id: null,
     created_at: '2026-06-20T10:00:00Z',
     updated_at: '2026-06-20T10:00:00Z',
     ...overrides,

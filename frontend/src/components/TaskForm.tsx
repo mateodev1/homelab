@@ -1,4 +1,5 @@
 import { type FormEvent, Suspense, lazy, useEffect, useState } from 'react';
+import type { Project } from '../types/project';
 import type { IssueType, Todo, TodoKind, TodoStatus } from '../types/todo';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -14,6 +15,7 @@ const MDEditor = lazy(async () => {
 
 interface TaskFormProps {
   todo: Todo | null;
+  projects: Project[];
   onCreate: (
     title: string,
     body?: string,
@@ -21,17 +23,21 @@ interface TaskFormProps {
     dueDate?: string | null,
     kind?: TodoKind,
     issueType?: IssueType | null,
+    projectId?: number | null,
   ) => Promise<void>;
   onUpdate: (
     id: number,
     changes: Partial<
-      Pick<Todo, 'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type'>
+      Pick<
+        Todo,
+        'title' | 'body' | 'status' | 'priority' | 'due_date' | 'kind' | 'issue_type' | 'project_id'
+      >
     >,
   ) => Promise<void>;
   onCancelEdit: () => void;
 }
 
-export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormProps) {
+export function TaskForm({ todo, projects, onCreate, onUpdate, onCancelEdit }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [status, setStatus] = useState<TodoStatus>('todo');
@@ -39,6 +45,7 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
   const [dueDate, setDueDate] = useState<string>('');
   const [kind, setKind] = useState<TodoKind>('note');
   const [issueType, setIssueType] = useState<IssueType | ''>('');
+  const [projectId, setProjectId] = useState<number | ''>('');
 
   const isEditing = Boolean(todo);
 
@@ -51,6 +58,7 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
       setDueDate('');
       setKind('note');
       setIssueType('');
+      setProjectId('');
       return;
     }
 
@@ -61,6 +69,7 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
     setDueDate(todo.due_date ?? '');
     setKind(todo.kind);
     setIssueType(todo.issue_type ?? '');
+    setProjectId(todo.project_id ?? '');
   }, [todo]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -72,6 +81,7 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
     }
 
     const resolvedIssueType = kind === 'issue' ? issueType || null : null;
+    const resolvedProjectId = projectId === '' ? null : projectId;
 
     if (todo) {
       await onUpdate(todo.id, {
@@ -82,17 +92,27 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
         due_date: dueDate || null,
         kind,
         issue_type: resolvedIssueType,
+        project_id: resolvedProjectId,
       });
       return;
     }
 
-    await onCreate(trimmedTitle, body, priority, dueDate || null, kind, resolvedIssueType);
+    await onCreate(
+      trimmedTitle,
+      body,
+      priority,
+      dueDate || null,
+      kind,
+      resolvedIssueType,
+      resolvedProjectId,
+    );
     setTitle('');
     setBody('');
     setPriority(0);
     setDueDate('');
     setKind('note');
     setIssueType('');
+    setProjectId('');
   };
 
   return (
@@ -163,6 +183,23 @@ export function TaskForm({ todo, onCreate, onUpdate, onCancelEdit }: TaskFormPro
                 value={dueDate}
                 onChange={(event) => setDueDate(event.target.value)}
               />
+            </Label>
+
+            <Label className="flex-col items-stretch gap-1.5">
+              Project
+              <Select
+                value={projectId}
+                onChange={(event) =>
+                  setProjectId(event.target.value === '' ? '' : Number(event.target.value))
+                }
+              >
+                <option value="">No project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </Select>
             </Label>
 
             <Label className="flex-col items-stretch gap-1.5">

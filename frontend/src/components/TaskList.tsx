@@ -1,9 +1,11 @@
 import { Loader2 } from 'lucide-react';
+import type { Project } from '../types/project';
 import type { Todo } from '../types/todo';
 import { TaskRow } from './TaskRow';
 
 interface TaskListProps {
   tasks: Todo[];
+  projects: Project[];
   loading: boolean;
   error: string | null;
   activeIndex: number;
@@ -13,6 +15,7 @@ interface TaskListProps {
 
 export function TaskList({
   tasks,
+  projects,
   loading,
   error,
   activeIndex,
@@ -53,6 +56,7 @@ export function TaskList({
         <TaskRow
           key={todo.id}
           todo={todo}
+          project={projects.find((project) => project.id === todo.project_id) ?? null}
           active={index === activeIndex}
           onSelect={onSelectTask}
           onDelete={onDeleteTask}

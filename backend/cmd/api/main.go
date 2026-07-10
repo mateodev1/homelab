@@ -61,12 +61,15 @@ func main() {
 	// Wire: store → service → handler.
 	s := store.New(db)
 	svc := service.NewTodoService(s)
+	projectSvc := service.NewProjectService(s)
 
 	todoHandler := handler.NewTodoHandler(svc)
+	projectHandler := handler.NewProjectHandler(projectSvc)
 	healthHandler := handler.NewHealthHandler(sqlHealthChecker{db: db})
 
 	mux := http.NewServeMux()
 	todoHandler.Register(mux)
+	projectHandler.Register(mux)
 	healthHandler.Register(mux)
 
 	apiKeyForAuth := ""

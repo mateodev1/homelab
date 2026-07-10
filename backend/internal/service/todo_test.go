@@ -86,7 +86,7 @@ func TestCreateTodo_AssignsDefaults(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	got, err := svc.CreateTodo(ctx, "Learn TDD", "", 3, nil, "", nil, time.Now())
+	got, err := svc.CreateTodo(ctx, "Learn TDD", "", 3, nil, "", nil, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestCreateTodo_InvalidPriority(t *testing.T) {
 
 	svc := service.NewTodoService(newMockStore())
 
-	_, err := svc.CreateTodo(context.Background(), "x", "", 7, nil, "", nil, time.Now())
+	_, err := svc.CreateTodo(context.Background(), "x", "", 7, nil, "", nil, nil, time.Now())
 	if err == nil {
 		t.Fatalf("expected invalid priority error")
 	}
@@ -124,7 +124,7 @@ func TestCreateTodo_IssueKindWithType(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 
 	issueType := domain.IssueTypeBug
-	got, err := svc.CreateTodo(context.Background(), "Fix bug", "", 0, nil, domain.TodoKindIssue, &issueType, time.Now())
+	got, err := svc.CreateTodo(context.Background(), "Fix bug", "", 0, nil, domain.TodoKindIssue, &issueType, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestCreateTodo_InvalidKind(t *testing.T) {
 
 	svc := service.NewTodoService(newMockStore())
 
-	_, err := svc.CreateTodo(context.Background(), "x", "", 0, nil, "backlog", nil, time.Now())
+	_, err := svc.CreateTodo(context.Background(), "x", "", 0, nil, "backlog", nil, nil, time.Now())
 	if err == nil {
 		t.Fatalf("expected invalid kind error")
 	}
@@ -156,7 +156,7 @@ func TestCreateTodo_IssueTypeRequiresIssueKind(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 
 	issueType := domain.IssueTypeBug
-	_, err := svc.CreateTodo(context.Background(), "x", "", 0, nil, domain.TodoKindNote, &issueType, time.Now())
+	_, err := svc.CreateTodo(context.Background(), "x", "", 0, nil, domain.TodoKindNote, &issueType, nil, time.Now())
 	if err == nil {
 		t.Fatalf("expected error when issue_type is set with kind note")
 	}
@@ -173,7 +173,7 @@ func TestListTodos(t *testing.T) {
 	ctx := context.Background()
 
 	for _, title := range []string{"A", "B", "C"} {
-		if _, err := svc.CreateTodo(ctx, title, "", 0, nil, "", nil, time.Now()); err != nil {
+		if _, err := svc.CreateTodo(ctx, title, "", 0, nil, "", nil, nil, time.Now()); err != nil {
 			t.Fatalf("CreateTodo %q: %v", title, err)
 		}
 	}
@@ -195,7 +195,7 @@ func TestUpdateTodo_PatchMergeMatrix(t *testing.T) {
 	ctx := context.Background()
 
 	dueDate := "2026-07-01"
-	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, &dueDate, "", nil, time.Now())
+	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, &dueDate, "", nil, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestUpdateTodo_DueDateSemantics(t *testing.T) {
 	ctx := context.Background()
 
 	dueDate := "2026-07-01"
-	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, &dueDate, "", nil, time.Now())
+	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, &dueDate, "", nil, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -289,7 +289,7 @@ func TestUpdateTodo_ChangingIssueToNoteClearsIssueType(t *testing.T) {
 	ctx := context.Background()
 
 	issueType := domain.IssueTypeBug
-	created, err := svc.CreateTodo(ctx, "Fix bug", "Body", 1, nil, domain.TodoKindIssue, &issueType, time.Now())
+	created, err := svc.CreateTodo(ctx, "Fix bug", "Body", 1, nil, domain.TodoKindIssue, &issueType, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -314,7 +314,7 @@ func TestUpdateTodo_ValidationPaths(t *testing.T) {
 	svc := service.NewTodoService(ms)
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, nil, "", nil, time.Now())
+	created, err := svc.CreateTodo(ctx, "Original", "Body", 1, nil, "", nil, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -356,7 +356,7 @@ func TestDeleteTodo_Removes(t *testing.T) {
 	svc := service.NewTodoService(newMockStore())
 	ctx := context.Background()
 
-	created, err := svc.CreateTodo(ctx, "Delete me", "", 0, nil, "", nil, time.Now())
+	created, err := svc.CreateTodo(ctx, "Delete me", "", 0, nil, "", nil, nil, time.Now())
 	if err != nil {
 		t.Fatalf("CreateTodo: %v", err)
 	}
@@ -378,7 +378,7 @@ func TestCreateTodo_PropagatesStoreError(t *testing.T) {
 	ms.err = errors.New("db full")
 	svc := service.NewTodoService(ms)
 
-	_, err := svc.CreateTodo(context.Background(), "Fail", "", 0, nil, "", nil, time.Now())
+	_, err := svc.CreateTodo(context.Background(), "Fail", "", 0, nil, "", nil, nil, time.Now())
 	if err == nil {
 		t.Fatal("expected error from CreateTodo when store fails")
 	}

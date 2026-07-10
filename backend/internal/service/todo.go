@@ -27,6 +27,7 @@ type TodoPatch struct {
 	DueDate   **string
 	Kind      *string
 	IssueType **string
+	ProjectID **int64
 }
 
 // NewTodoService creates a new TodoService with the given store.
@@ -55,7 +56,7 @@ func validateKindAndIssueType(kind string, issueType *string) (string, error) {
 }
 
 // CreateTodo creates a new Todo with the given fields and persists it.
-func (s *TodoService) CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, createdAt time.Time) (*domain.Todo, error) {
+func (s *TodoService) CreateTodo(ctx context.Context, title, body string, priority int, dueDate *string, kind string, issueType *string, projectID *int64, createdAt time.Time) (*domain.Todo, error) {
 	if priority < 0 || priority > 3 {
 		return nil, errors.New("priority must be between 0 and 3")
 	}
@@ -71,6 +72,7 @@ func (s *TodoService) CreateTodo(ctx context.Context, title, body string, priori
 		DueDate:   dueDate,
 		Kind:      kind,
 		IssueType: issueType,
+		ProjectID: projectID,
 		CreatedAt: createdAt.UTC(),
 	}
 	if err := s.store.Create(ctx, todo); err != nil {
@@ -136,6 +138,9 @@ func (s *TodoService) UpdateTodo(ctx context.Context, id int64, patch TodoPatch)
 	}
 	if patch.IssueType != nil {
 		todo.IssueType = *patch.IssueType
+	}
+	if patch.ProjectID != nil {
+		todo.ProjectID = *patch.ProjectID
 	}
 	if todo.IssueType != nil {
 		if todo.Kind != domain.TodoKindIssue {
