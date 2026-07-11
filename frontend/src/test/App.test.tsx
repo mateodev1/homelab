@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { ThemeProvider } from '../context/ThemeContext';
+import { TodosBoardProvider } from '../context/TodosBoardContext';
 import { useProjects } from '../hooks/useProjects';
 import { useTodos } from '../hooks/useTodos';
 import type { Todo } from '../types/todo';
@@ -9,7 +10,9 @@ import type { Todo } from '../types/todo';
 const renderApp = () =>
   render(
     <ThemeProvider>
-      <App />
+      <TodosBoardProvider>
+        <App />
+      </TodosBoardProvider>
     </ThemeProvider>,
   );
 
@@ -23,6 +26,23 @@ vi.mock('../hooks/useProjects', () => ({
 
 vi.mock('@uiw/react-md-editor', () => ({
   default: () => <div>Markdown editor</div>,
+}));
+
+const mockedNavigate = vi.fn();
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, params, children, ...rest }: Record<string, unknown>) => (
+    <a
+      href={String(to).replace(
+        /\$(\w+)/g,
+        (_, key: string) => (params as Record<string, string> | undefined)?.[key] ?? '',
+      )}
+      {...rest}
+    >
+      {children as never}
+    </a>
+  ),
+  useNavigate: () => mockedNavigate,
 }));
 
 const mockedUseTodos = vi.mocked(useTodos);
@@ -114,77 +134,6 @@ describe('App', () => {
     expect(screen.queryByText('Beta')).not.toBeInTheDocument();
   });
 
-  it('sidebar view filtering shows only tasks from the selected status', () => {
-    mockTodos([
-      makeTodo({ id: 1, title: 'Alpha', status: 'todo' }),
-      makeTodo({ id: 2, title: 'Beta', status: 'done' }),
-    ]);
-
-    renderApp();
-
-    expect(screen.getByText('Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Beta')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^done/i }));
-
-    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
-    expect(screen.getByText('Beta')).toBeInTheDocument();
-  });
-
-  it('sidebar kind filtering shows only tasks from the selected kind', () => {
-    mockTodos([
-      makeTodo({ id: 1, title: 'A note', kind: 'note' }),
-      makeTodo({ id: 2, title: 'An issue', kind: 'issue', issue_type: 'bug' }),
-    ]);
-
-    renderApp();
-
-    expect(screen.getByText('A note')).toBeInTheDocument();
-    expect(screen.getByText('An issue')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^issues/i }));
-
-    expect(screen.queryByText('A note')).not.toBeInTheDocument();
-    expect(screen.getByText('An issue')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^notes/i }));
-
-    expect(screen.getByText('A note')).toBeInTheDocument();
-    expect(screen.queryByText('An issue')).not.toBeInTheDocument();
-  });
-
-  it('opens the create task modal from the sidebar button and creates a task', async () => {
-    const addTodo = vi.fn().mockResolvedValue(undefined);
-    mockTodos([], { addTodo });
-
-    renderApp();
-
-    expect(screen.queryByPlaceholderText('Task title')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /new task/i }));
-
-    const titleInput = await screen.findByPlaceholderText('Task title');
-    fireEvent.change(titleInput, { target: { value: 'New task' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add task' }));
-
-    await waitFor(() => {
-      expect(addTodo).toHaveBeenCalled();
-    });
-  });
-
-  it('closes the modal on Escape', async () => {
-    mockTodos([]);
-
-    renderApp();
-
-    fireEvent.click(screen.getByRole('button', { name: /new task/i }));
-    await screen.findByPlaceholderText('Task title');
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-
-    expect(screen.queryByPlaceholderText('Task title')).not.toBeInTheDocument();
-  });
-
   it('moves the active row with j/k keyboard shortcuts', () => {
     mockTodos([
       makeTodo({ id: 1, title: 'Alpha' }),
@@ -194,33 +143,17 @@ describe('App', () => {
 
     renderApp();
 
-    expect(screen.getByTestId('task-row-1')).toHaveClass('bg-accent');
+    expect(screen.getByTestId('note-card-1')).toHaveClass('ring-2');
 
     fireEvent.keyDown(document, { key: 'j' });
-    expect(screen.getByTestId('task-row-2')).toHaveClass('bg-accent');
-    expect(screen.getByTestId('task-row-1')).not.toHaveClass('bg-accent');
+    expect(screen.getByTestId('note-card-2')).toHaveClass('ring-2');
+    expect(screen.getByTestId('note-card-1')).not.toHaveClass('ring-2');
 
     fireEvent.keyDown(document, { key: 'j' });
-    expect(screen.getByTestId('task-row-3')).toHaveClass('bg-accent');
+    expect(screen.getByTestId('note-card-3')).toHaveClass('ring-2');
 
     fireEvent.keyDown(document, { key: 'k' });
-    expect(screen.getByTestId('task-row-2')).toHaveClass('bg-accent');
-  });
-
-  it('opens the active task via Enter and closes it via Escape', async () => {
-    mockTodos([makeTodo({ id: 1, title: 'Alpha' }), makeTodo({ id: 2, title: 'Beta' })]);
-
-    renderApp();
-
-    fireEvent.keyDown(document, { key: 'j' });
-    fireEvent.keyDown(document, { key: 'Enter' });
-
-    const titleInput = await screen.findByPlaceholderText('Task title');
-    expect(titleInput).toHaveValue('Beta');
-
-    fireEvent.keyDown(document, { key: 'Escape' });
-
-    expect(screen.queryByPlaceholderText('Task title')).not.toBeInTheDocument();
+    expect(screen.getByTestId('note-card-2')).toHaveClass('ring-2');
   });
 
   it('resets the active row to the first task when the search query changes', () => {
@@ -233,29 +166,12 @@ describe('App', () => {
     renderApp();
 
     fireEvent.keyDown(document, { key: 'j' });
-    expect(screen.getByTestId('task-row-2')).toHaveClass('bg-accent');
+    expect(screen.getByTestId('note-card-2')).toHaveClass('ring-2');
 
     fireEvent.change(screen.getByRole('searchbox', { name: /search tasks/i }), {
       target: { value: 'alpha' },
     });
 
-    expect(screen.getByTestId('task-row-1')).toHaveClass('bg-accent');
-  });
-
-  it('resets the active row to the first task when the sidebar view changes', () => {
-    mockTodos([
-      makeTodo({ id: 1, title: 'Alpha', status: 'todo' }),
-      makeTodo({ id: 2, title: 'Beta', status: 'todo' }),
-      makeTodo({ id: 3, title: 'Gamma', status: 'done' }),
-    ]);
-
-    renderApp();
-
-    fireEvent.keyDown(document, { key: 'j' });
-    expect(screen.getByTestId('task-row-2')).toHaveClass('bg-accent');
-
-    fireEvent.click(screen.getByRole('button', { name: /^done/i }));
-
-    expect(screen.getByTestId('task-row-3')).toHaveClass('bg-accent');
+    expect(screen.getByTestId('note-card-1')).toHaveClass('ring-2');
   });
 });

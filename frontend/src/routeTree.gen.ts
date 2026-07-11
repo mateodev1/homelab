@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTodosRouteImport } from './routes/_authenticated/todos'
+import { Route as AuthenticatedTodosIndexRouteImport } from './routes/_authenticated/todos.index'
+import { Route as AuthenticatedTodosIdRouteImport } from './routes/_authenticated/todos.$id'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -27,27 +29,48 @@ const AuthenticatedTodosRoute = AuthenticatedTodosRouteImport.update({
   path: '/todos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTodosIndexRoute = AuthenticatedTodosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedTodosRoute,
+} as any)
+const AuthenticatedTodosIdRoute = AuthenticatedTodosIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedTodosRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/todos': typeof AuthenticatedTodosRoute
+  '/todos': typeof AuthenticatedTodosRouteWithChildren
+  '/todos/$id': typeof AuthenticatedTodosIdRoute
+  '/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/todos': typeof AuthenticatedTodosRoute
+  '/todos/$id': typeof AuthenticatedTodosIdRoute
+  '/todos': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/_authenticated/todos': typeof AuthenticatedTodosRoute
+  '/_authenticated/todos': typeof AuthenticatedTodosRouteWithChildren
+  '/_authenticated/todos/$id': typeof AuthenticatedTodosIdRoute
+  '/_authenticated/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/todos'
+  fullPaths: '/' | '/todos' | '/todos/$id' | '/todos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/todos'
-  id: '__root__' | '/' | '/_authenticated' | '/_authenticated/todos'
+  to: '/' | '/todos/$id' | '/todos'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/_authenticated/todos'
+    | '/_authenticated/todos/$id'
+    | '/_authenticated/todos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,15 +101,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTodosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/todos/': {
+      id: '/_authenticated/todos/'
+      path: '/'
+      fullPath: '/todos/'
+      preLoaderRoute: typeof AuthenticatedTodosIndexRouteImport
+      parentRoute: typeof AuthenticatedTodosRoute
+    }
+    '/_authenticated/todos/$id': {
+      id: '/_authenticated/todos/$id'
+      path: '/$id'
+      fullPath: '/todos/$id'
+      preLoaderRoute: typeof AuthenticatedTodosIdRouteImport
+      parentRoute: typeof AuthenticatedTodosRoute
+    }
   }
 }
 
+interface AuthenticatedTodosRouteChildren {
+  AuthenticatedTodosIdRoute: typeof AuthenticatedTodosIdRoute
+  AuthenticatedTodosIndexRoute: typeof AuthenticatedTodosIndexRoute
+}
+
+const AuthenticatedTodosRouteChildren: AuthenticatedTodosRouteChildren = {
+  AuthenticatedTodosIdRoute: AuthenticatedTodosIdRoute,
+  AuthenticatedTodosIndexRoute: AuthenticatedTodosIndexRoute,
+}
+
+const AuthenticatedTodosRouteWithChildren =
+  AuthenticatedTodosRoute._addFileChildren(AuthenticatedTodosRouteChildren)
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedTodosRoute: typeof AuthenticatedTodosRoute
+  AuthenticatedTodosRoute: typeof AuthenticatedTodosRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedTodosRoute: AuthenticatedTodosRoute,
+  AuthenticatedTodosRoute: AuthenticatedTodosRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

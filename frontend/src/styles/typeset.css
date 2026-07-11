@@ -1,0 +1,160 @@
+/*
+ * Typeset — a small, container-aware styling system for rendered markdown.
+ * Inspired by shadcn/typeset: https://ui.shadcn.com — hand-authored here so
+ * we own the file and can map it directly onto our existing theme tokens
+ * (see global.css) instead of duplicating colors/fonts.
+ *
+ * Usage: <div className="typeset typeset-docs"><YourMarkdown /></div>
+ * Opt a subtree out with `not-typeset` / `data-not-typeset`.
+ */
+
+.typeset {
+  --typeset-font-body: inherit;
+  --typeset-font-heading: inherit;
+  --typeset-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --typeset-size: 1em;
+  --typeset-leading: 1.75;
+  --typeset-flow: 1.25em;
+
+  font-family: var(--typeset-font-body);
+  font-size: var(--typeset-size);
+  line-height: var(--typeset-leading);
+  color: var(--foreground);
+}
+
+.typeset-docs {
+  --typeset-size: 0.95em;
+  --typeset-leading: 1.6;
+  --typeset-flow: 1em;
+}
+
+.typeset :where(.not-typeset, [data-not-typeset]) {
+  all: revert;
+}
+
+.typeset :where(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--typeset-font-heading);
+  font-weight: 600;
+  letter-spacing: -0.011em;
+  color: var(--foreground);
+  margin-block-start: var(--typeset-flow);
+  margin-block-end: 0;
+  line-height: 1.25;
+}
+
+.typeset :where(h1, h2, h3, h4, h5, h6):first-child {
+  margin-block-start: 0;
+}
+
+.typeset :where(h1) {
+  font-size: 1.6em;
+}
+
+.typeset :where(h2) {
+  font-size: 1.35em;
+}
+
+.typeset :where(h3) {
+  font-size: 1.15em;
+}
+
+.typeset :where(h4, h5, h6) {
+  font-size: 1em;
+}
+
+.typeset :where(p, ul, ol, blockquote, pre, table, hr, img) {
+  margin-block-start: var(--typeset-flow);
+  margin-block-end: 0;
+}
+
+.typeset :where(p, ul, ol, blockquote, pre, table, hr, img):first-child {
+  margin-block-start: 0;
+}
+
+.typeset :where(ul, ol) {
+  padding-inline-start: 1.4em;
+}
+
+.typeset :where(li) {
+  margin-block-start: calc(var(--typeset-flow) * 0.35);
+}
+
+.typeset :where(li):first-child {
+  margin-block-start: 0;
+}
+
+.typeset :where(li > ul, li > ol) {
+  margin-block-start: calc(var(--typeset-flow) * 0.35);
+}
+
+.typeset :where(a) {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 2px;
+}
+
+.typeset :where(strong) {
+  font-weight: 600;
+}
+
+.typeset :where(blockquote) {
+  border-inline-start: 2px solid var(--border);
+  padding-inline-start: 1em;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.typeset :where(code) {
+  font-family: var(--typeset-font-mono);
+  font-size: 0.875em;
+  background-color: var(--muted);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0.15em 0.4em;
+}
+
+.typeset :where(pre) {
+  font-family: var(--typeset-font-mono);
+  font-size: 0.875em;
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  padding: 0.9em 1em;
+  overflow-x: auto;
+}
+
+.typeset :where(pre code) {
+  background-color: transparent;
+  padding: 0;
+}
+
+.typeset :where(hr) {
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.typeset :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.typeset :where(th, td) {
+  border: 1px solid var(--border);
+  padding: 0.5em 0.75em;
+  text-align: start;
+}
+
+.typeset :where(th) {
+  background-color: var(--muted);
+  font-weight: 600;
+}
+
+.typeset :where(img) {
+  max-width: 100%;
+  border-radius: calc(var(--radius) - 2px);
+}
+
+.typeset-scroll {
+  overflow-x: auto;
+}

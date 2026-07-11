@@ -18,6 +18,7 @@ function RootLayout() {
           redirect_uri: window.location.origin,
           audience: import.meta.env.VITE_AUTH0_AUDIENCE,
         }}
+        cacheLocation="localstorage"
         onRedirectCallback={(appState) => {
           // Navigate AFTER Auth0 finishes processing the callback —
           // this avoids the race condition where isAuthenticated is still false
