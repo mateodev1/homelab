@@ -29,21 +29,42 @@ type Config struct {
 }
 
 // Resolve applies the priority order: explicit flag values (when non-empty)
-// take precedence, then the corresponding environment variables, then the
-// built-in defaults. BaseURL and Env have defaults; APIKey is left empty when
-// nothing provides it so callers can detect a missing key in production and
-// fail clearly. RequireAuth is derived from Env (production => true).
-//
-// Callers should pass the flag values exactly as the user supplied them: an
-// empty string means "the user did not pass this flag" and falls back to env
-// or default. This keeps the priority chain in a single, testable place.
+// take precedence, then the corresponding environment variables, and finally
+// the built-in defaults. It is preserved as a back-compat wrapper over
+// ResolveWithFile with an empty file config; existing callers/tests keep their
+// signature. The file layer is added by ResolveWithFile (flags > env > file >
+// defaults).
 func Resolve(flagBaseURL, flagAPIKey, flagEnv string) Config {
+	return ResolveWithFile(Config{}, flagBaseURL, flagAPIKey, flagEnv)
+}
+
+// ResolveWithFile applies the full precedence chain, lowest to highest:
+// built-in defaults -> config file fields -> HOMELAB_* env vars -> explicit
+// flags (REQ-CFG-004). At each layer a non-empty value overrides the lower
+// layer; an empty value (absent/no-value) falls through. Empty env strings are
+// treated as unset (REQ-CFG-005). BaseURL and Env have built-in defaults;
+// APIKey defaults to empty so production callers can detect a missing key.
+// RequireAuth is derived purely as Env == "production" (REQ-CFG-003) and is
+// never read from the file.
+func ResolveWithFile(file Config, flagBaseURL, flagAPIKey, flagEnv string) Config {
 	cfg := Config{
 		BaseURL: DefaultBaseURL,
 		APIKey:  "",
 		Env:     DefaultEnv,
 	}
 
+	// file layer
+	if file.BaseURL != "" {
+		cfg.BaseURL = file.BaseURL
+	}
+	if file.APIKey != "" {
+		cfg.APIKey = file.APIKey
+	}
+	if file.Env != "" {
+		cfg.Env = file.Env
+	}
+
+	// env layer (non-empty wins; empty string is treated as unset)
 	if v := os.Getenv(EnvBaseURL); v != "" {
 		cfg.BaseURL = v
 	}
@@ -54,6 +75,7 @@ func Resolve(flagBaseURL, flagAPIKey, flagEnv string) Config {
 		cfg.Env = v
 	}
 
+	// flags layer (non-empty wins)
 	if flagBaseURL != "" {
 		cfg.BaseURL = flagBaseURL
 	}
