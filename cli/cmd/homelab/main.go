@@ -1,43 +1,20 @@
+// Command homelab is the CLI client for the homelab backend HTTP API.
 package main
 
 import (
 	"fmt"
 	"os"
+
+	"github.com/mateo/homelab/cli/internal/cmd"
 )
 
-const version = "0.0.1-dev"
+// version is the build-supplied CLI version string.
+var version = "0.1.0"
 
 func main() {
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "--version", "-v":
-			fmt.Printf("homelab %s\n", version)
-			return
-		case "--help", "-h", "help":
-			printUsage()
-			return
-		default:
-			fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", os.Args[1])
-			printUsage()
-			os.Exit(1)
-		}
+	root := cmd.NewRootCommand(version)
+	if err := root.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
-	printUsage()
-}
-
-func printUsage() {
-	fmt.Printf(`homelab CLI — coming soon
-
-Usage:
-  homelab [command]
-
-Available Commands:
-  (none yet — check back soon)
-
-Flags:
-  -h, --help      Show this help message
-  -v, --version   Print version information
-
-Version: %s
-`, version)
 }
