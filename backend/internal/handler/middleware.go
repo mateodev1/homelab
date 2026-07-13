@@ -42,22 +42,33 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// AuthMiddleware requires a valid "Authorization: Bearer <token>" header on
-// every request except OPTIONS preflight and /api/health. Two credential
-// types are accepted in parallel:
+// AuthMiddleware gates access to the backend based on requireAuth, the
+// symmetric dev/prod switch the caller derives from ENV.
+//
+// OPTIONS preflight and requests to /api/health always pass through unchanged.
+// When requireAuth is false (dev mode), every other request also passes
+// through WITHOUT any credential check — dev is fully open.
+// When requireAuth is true (prod mode), a valid "Authorization: Bearer <token>"
+// header is required on every non-exempt request. Two credential types are
+// accepted in parallel:
 //
 //  1. An exact match against apiKey — a static M2M client credential. Callers
-//     (cmd/api/main.go) should only pass a non-empty apiKey when it's meant to
-//     be accepted (currently: only when ENV=production).
+//     (cmd/api/main.go) only pass a non-empty apiKey when ENV=production.
 //  2. A JWT validated by validator (Auth0 access token: RS256 signature via
-//     JWKS, issuer, audience, expiry) — always checked, for real users via
-//     the frontend.
+//     JWKS, issuer, audience, expiry) — checked for real users via the
+//     frontend.
 //
-// The middleware itself is always wired; it's always active regardless of
-// ENV, only the apiKey acceptance is env-gated by the caller.
-func AuthMiddleware(apiKey string, validator *JWTValidator, next http.Handler) http.Handler {
+// The dev/prod gate is owned by requireAuth so dev is open and prod is
+// authenticated symmetrically; apiKey acceptance remains env-gated by the
+// caller passing a non-empty value only in production.
+func AuthMiddleware(apiKey string, validator *JWTValidator, requireAuth bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions || r.URL.Path == "/api/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if !requireAuth {
 			next.ServeHTTP(w, r)
 			return
 		}

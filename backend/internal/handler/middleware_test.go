@@ -62,7 +62,7 @@ func TestRecoveryMiddleware_Panic(t *testing.T) {
 }
 
 func TestAuthMiddleware_MissingHeader_Unauthorized(t *testing.T) {
-	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -77,7 +77,7 @@ func TestAuthMiddleware_MissingHeader_Unauthorized(t *testing.T) {
 }
 
 func TestAuthMiddleware_WrongAPIKey_Unauthorized(t *testing.T) {
-	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -94,7 +94,7 @@ func TestAuthMiddleware_WrongAPIKey_Unauthorized(t *testing.T) {
 
 func TestAuthMiddleware_CorrectAPIKey_PassesThrough(t *testing.T) {
 	called := false
-	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -113,9 +113,10 @@ func TestAuthMiddleware_CorrectAPIKey_PassesThrough(t *testing.T) {
 }
 
 func TestAuthMiddleware_EmptyAPIKey_NeverAccepted(t *testing.T) {
-	// apiKey == "" simulates a non-production environment: even an
-	// Authorization header equal to the literal empty string must not pass.
-	h := AuthMiddleware("", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	// In prod (requireAuth=true) with apiKey == "" and a nil validator, an
+	// Authorization header whose token is the literal empty string must not
+	// pass: there's no static credential to match and no JWT to validate.
+	h := AuthMiddleware("", nil, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -132,7 +133,7 @@ func TestAuthMiddleware_EmptyAPIKey_NeverAccepted(t *testing.T) {
 
 func TestAuthMiddleware_HealthExempt(t *testing.T) {
 	called := false
-	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -151,7 +152,7 @@ func TestAuthMiddleware_HealthExempt(t *testing.T) {
 
 func TestAuthMiddleware_OptionsExempt(t *testing.T) {
 	called := false
-	h := AuthMiddleware("secret", nil, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", nil, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -162,6 +163,47 @@ func TestAuthMiddleware_OptionsExempt(t *testing.T) {
 
 	if !called {
 		t.Fatal("expected next handler to be called for OPTIONS preflight without a key")
+	}
+}
+
+// TestAuthMiddleware_RequireAuthGate asserts the symmetric dev/prod gate: in
+// dev (requireAuth=false) a request to a protected route passes through with
+// NO Authorization header, while in prod (requireAuth=true) the same request
+// without a Bearer token is rejected with 401. This is the core of the
+// dev=open, prod=authenticated contract.
+func TestAuthMiddleware_RequireAuthGate(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		requireAuth bool
+		wantStatus  int
+		wantCalled  bool
+	}{
+		{"dev allows request without auth header", false, http.StatusOK, true},
+		{"prod rejects request without auth header", true, http.StatusUnauthorized, false},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Helper()
+			called := false
+			next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				called = true
+				w.WriteHeader(http.StatusOK)
+			})
+			h := AuthMiddleware("secret", nil, tc.requireAuth, next)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/todos", nil)
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantStatus {
+				t.Fatalf("status = %d, want %d", rec.Code, tc.wantStatus)
+			}
+			if called != tc.wantCalled {
+				t.Fatalf("next called = %v, want %v", called, tc.wantCalled)
+			}
+		})
 	}
 }
 

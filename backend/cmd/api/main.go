@@ -72,11 +72,11 @@ func main() {
 	projectHandler.Register(mux)
 	healthHandler.Register(mux)
 
-	apiKeyForAuth := ""
-	if env == "production" {
-		apiKeyForAuth = apiKey
-	}
-	protected := handler.AuthMiddleware(apiKeyForAuth, validator, mux)
+	requireAuth := env == "production"
+	// requireAuth already encodes "prod"; in prod the Fatal above guarantees
+	// apiKey != "", and in dev apiKey is ignored by AuthMiddleware. Pass it
+	// through unconditionally — there's nothing left to gate.
+	protected := handler.AuthMiddleware(apiKey, validator, requireAuth, mux)
 	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(protected)))
 
 	addr := ":" + port

@@ -199,7 +199,7 @@ func TestAuthMiddleware_ValidJWT_PassesThrough(t *testing.T) {
 	token := signTestToken(t, key, testKID, testIssuer, testAudience, time.Hour)
 
 	called := false
-	h := AuthMiddleware("", v, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("", v, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -228,7 +228,7 @@ func TestAuthMiddleware_InvalidJWTAndNoAPIKeyMatch_Unauthorized(t *testing.T) {
 	v := newTestValidator(t, srv.URL)
 	badToken := signTestToken(t, key, testKID, testIssuer, "wrong-audience", time.Hour)
 
-	h := AuthMiddleware("secret", v, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("secret", v, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -253,10 +253,11 @@ func TestAuthMiddleware_APIKeyIgnoredWhenNotProduction(t *testing.T) {
 
 	v := newTestValidator(t, srv.URL)
 
-	// Caller passes apiKey="" to simulate ENV != production: even a request
+	// Caller passes apiKey="" with requireAuth=true to simulate a prod build
+	// where the static M2M credential is not configured: even a request
 	// carrying what would be the correct API_KEY value must fall through to
 	// JWT validation and fail, since there is no valid JWT here either.
-	h := AuthMiddleware("", v, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := AuthMiddleware("", v, true, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("next handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
