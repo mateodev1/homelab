@@ -1,9 +1,11 @@
 // Package client talks to the homelab backend HTTP API.
 //
 // The client is intentionally thin: it owns the base URL, the optional API key,
-// and the single Do() entry point used by every command. Auth handling lives
-// here so callers never think about headers — Do() attaches the Bearer header
-// unless the request targets /api/health, which the backend serves without auth.
+// the require-auth gate, and the single Do() entry point used by every command.
+// Auth handling lives here so callers never think about headers. The Bearer
+// header is attached only when requireAuth is true (production) AND the request
+// is not to /api/health. In dev (requireAuth=false) no Authorization header is
+// ever sent, mirroring the backend's dev=open, prod=authenticated gate.
 package client
 
 import (
@@ -20,26 +22,32 @@ const healthPath = "/api/health"
 
 // Client is a minimal HTTP client for the homelab backend.
 type Client struct {
-	baseURL string
-	apiKey  string
-	http    *http.Client
+	baseURL     string
+	apiKey      string
+	requireAuth bool
+	http        *http.Client
 }
 
-// New returns a client rooted at the given base URL. An empty apiKey is
-// permitted: requests to /api/health still work, all other routes will fail
-// server-side with 401.
-func New(baseURL, apiKey string) *Client {
+// New returns a client rooted at the given base URL. requireAuth mirrors the
+// backend's auth gate: when true (production) Do attaches
+// "Authorization: Bearer <apiKey>" to every request except /api/health; when
+// false (development) no Authorization header is ever sent, even if apiKey is
+// non-empty — dev is fully open. An empty apiKey is permitted in dev; in prod
+// callers are expected to enforce a non-empty key before constructing a client.
+func New(baseURL, apiKey string, requireAuth bool) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		apiKey:  apiKey,
-		http:    &http.Client{},
+		baseURL:     strings.TrimRight(baseURL, "/"),
+		apiKey:      apiKey,
+		requireAuth: requireAuth,
+		http:        &http.Client{},
 	}
 }
 
 // Do performs an HTTP request against path (e.g. "/api/todos"). body is sent as
-// JSON; pass nil for requests without a body. When path is /api/health no
-// Authorization header is attached. Non-2xx responses are returned as an error
-// carrying the server's {"error": "..."} message when present.
+// JSON; pass nil for requests without a body. The Authorization header is
+// attached only when requireAuth is true and path is not /api/health; /api/health
+// is always unauthenticated regardless of mode. Non-2xx responses are returned
+// as an error carrying the server's {"error": "..."} message when present.
 func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]byte, int, error) {
 	var reader io.Reader
 	if body != nil {
@@ -53,7 +61,7 @@ func (c *Client) Do(ctx context.Context, method, path string, body []byte) ([]by
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if path != healthPath && c.apiKey != "" {
+	if c.requireAuth && path != healthPath {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
 

@@ -59,7 +59,7 @@ func TestTodoList_ParsesJSON(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	out, _, err := runRoot(t, srv, "k", "todo", "list")
+	out, _, err := runRoot(t, srv, "k", "todo", "list", "--env=production")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
 	}
@@ -182,7 +182,26 @@ func TestHealth_NoAPIKeyRequired(t *testing.T) {
 	}
 }
 
-func TestRequiresAPIKey_MissingKeyErrors(t *testing.T) {
+func TestRequiresAPIKey_MissingKeyErrorsInProd(t *testing.T) {
+	t.Parallel()
+	h := &captureHandler{status: http.StatusOK, resp: []byte("[]")}
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+
+	root := NewRootCommand("test")
+	root.SetArgs([]string{"--base-url", srv.URL, "--env=production", "todo", "list"})
+	errBuf := &bytes.Buffer{}
+	root.SetErr(errBuf)
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected error when api key missing in production for todo list")
+	}
+	if !strings.Contains(err.Error(), "api key required") {
+		t.Errorf("error %q missing hint", err)
+	}
+}
+
+func TestTodoList_DevWithoutAPIKeyDoesNotRequireKey(t *testing.T) {
 	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte("[]")}
 	srv := httptest.NewServer(h)
@@ -190,14 +209,12 @@ func TestRequiresAPIKey_MissingKeyErrors(t *testing.T) {
 
 	root := NewRootCommand("test")
 	root.SetArgs([]string{"--base-url", srv.URL, "todo", "list"})
-	errBuf := &bytes.Buffer{}
-	root.SetErr(errBuf)
-	err := root.Execute()
-	if err == nil {
-		t.Fatal("expected error when api key missing for todo list")
+	if err := root.Execute(); err != nil {
+		t.Fatalf("dev todo list must not require an api key: %v", err)
 	}
-	if !strings.Contains(err.Error(), "api key required") {
-		t.Errorf("error %q missing hint", err)
+	// Dev mode must NOT send an Authorization header (dev = no auth).
+	if h.lastAuth != "" {
+		t.Errorf("dev must not send Authorization, got %q", h.lastAuth)
 	}
 }
 

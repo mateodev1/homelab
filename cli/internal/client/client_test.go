@@ -44,13 +44,18 @@ func (h *recordingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func TestDo_SendsBearerExceptHealth(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name     string
-		path     string
-		apiKey   string
-		wantAuth string
+		name        string
+		path        string
+		apiKey      string
+		requireAuth bool
+		wantAuth    string
 	}{
-		{"todos route gets bearer", "/api/todos", "secret-key", "Bearer secret-key"},
-		{"health route skips bearer", "/api/health", "secret-key", ""},
+		{"prod todos route gets bearer", "/api/todos", "secret-key", true, "Bearer secret-key"},
+		{"prod health route skips bearer", "/api/health", "secret-key", true, ""},
+		{"dev todos route skips bearer", "/api/todos", "secret-key", false, ""},
+		{"dev health route skips bearer", "/api/health", "secret-key", false, ""},
+		// Dev must NEVER send Authorization, even when a key is present — dev = no auth.
+		{"dev with key present still skips bearer", "/api/todos", "secret-key", false, ""},
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -60,7 +65,7 @@ func TestDo_SendsBearerExceptHealth(t *testing.T) {
 			srv := httptest.NewServer(h)
 			t.Cleanup(srv.Close)
 
-			c := New(srv.URL, tc.apiKey)
+			c := New(srv.URL, tc.apiKey, tc.requireAuth)
 			if _, _, err := c.Do(context.Background(), "GET", tc.path, nil); err != nil {
 				t.Fatalf("Do: %v", err)
 			}
@@ -81,7 +86,7 @@ func TestDo_SurfacesErrorEnvelope(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	c := New(srv.URL, "bad-key")
+	c := New(srv.URL, "bad-key", true)
 	_, _, err := c.Do(context.Background(), "GET", "/api/todos", nil)
 	if err == nil {
 		t.Fatal("expected error for 401, got nil")
@@ -104,7 +109,7 @@ func TestDo_PlainTextMethodNotAllowed(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	c := New(srv.URL, "k")
+	c := New(srv.URL, "k", true)
 	_, _, err := c.Do(context.Background(), "PATCH", "/api/todos", nil)
 	if err == nil {
 		t.Fatal("expected error for 405")
@@ -120,7 +125,7 @@ func TestDo_PostsJSONBody(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	c := New(srv.URL, "k")
+	c := New(srv.URL, "k", true)
 	body := []byte(`{"title":"x"}`)
 	if _, _, err := c.Do(context.Background(), "POST", "/api/todos", body); err != nil {
 		t.Fatalf("Do: %v", err)
@@ -139,7 +144,7 @@ func TestDo_DeletesReturnNoBody(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	c := New(srv.URL, "k")
+	c := New(srv.URL, "k", true)
 	raw, status, err := c.Do(context.Background(), "DELETE", "/api/todos/1", nil)
 	if err != nil {
 		t.Fatalf("Do: %v", err)
@@ -154,7 +159,7 @@ func TestDo_DeletesReturnNoBody(t *testing.T) {
 
 func TestNew_TrimsTrailingSlash(t *testing.T) {
 	t.Parallel()
-	c := New("http://localhost:8080/", "k")
+	c := New("http://localhost:8080/", "k", true)
 	if c.baseURL != "http://localhost:8080" {
 		t.Errorf("baseURL = %q", c.baseURL)
 	}
@@ -167,7 +172,7 @@ func TestDo_HealthNoKeyButKeyPresentStillSkipsHeader(t *testing.T) {
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
-	c := New(srv.URL, "secret")
+	c := New(srv.URL, "secret", true)
 	if _, _, err := c.Do(context.Background(), "GET", "/api/health", nil); err != nil {
 		t.Fatalf("Do: %v", err)
 	}
