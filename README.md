@@ -84,11 +84,53 @@ task lint:go
 task lint:frontend
 ```
 
-## Deployment
+## CLI Configuration
 
-Deploys are triggered by pushing a semver tag. CI builds the `prod` targets for
-`backend` and `frontend`, pushes them to GHCR, then a self-hosted runner pulls
-and restarts the stack on the homelab server.
+The `homelab` CLI (under `cli/`) persists its configuration to a JSON file so you
+don't have to repeat flags:
+
+```
+~/.config/homelab/config.json
+```
+
+The directory honors `HOMELAB_CONFIG_DIR` for ad-hoc overrides; the file is
+written with permission `0600` (owner read/write only; best-effort on Windows).
+The file contains only `base_url`, `api_key`, and `env` (snake_case JSON);
+`require_auth` is never persisted — it is always derived as `env == "production"`.
+
+### Resolution precedence
+
+Configuration is resolved, highest to lowest:
+
+1. Explicit flags (`--base-url`, `--api-key`, `--env`)
+2. `HOMELAB_BASE_URL` / `HOMELAB_API_KEY` / `HOMELAB_ENV` environment variables
+   (an empty env value is treated as unset)
+3. The config file fields
+4. Built-in defaults (`base_url` = `http://localhost:8080`, `env` = development)
+
+### `homelab login`
+
+Persist the config file with `homelab login` (it never contacts the backend):
+
+```bash
+# Development (default): stores env=development and an empty API key, no prompt.
+homelab login
+
+# Production: reads the API key from stdin (no echo on a TTY; one line when piped).
+homelab login --env production
+echo "$HOMELAB_API_KEY" | homelab login --env production
+```
+
+Notes:
+
+- `--env` defaults to `development`; when omitted, the existing config file's
+  `env` is reused; an explicit `--env=production` overrides the file.
+- `--base-url` is honored into the persisted file when provided.
+- `--api-key` is ignored by `login` (the key comes from stdin in production) and
+  emits a stderr warning if passed.
+- On an empty production input, `login` exits non-zero and writes no file.
+
+## Deployment
 
 ```bash
 # Cut a release (triggers build-and-push + deploy jobs in .github/workflows/ci.yml)
