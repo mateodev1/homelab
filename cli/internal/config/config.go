@@ -99,19 +99,23 @@ type fileConfig struct {
 	Env     string `json:"env"`
 }
 
-// configDirFn is the swappable seam for the config directory (REQ-CFG-007 /
-// SC-CFG-008). Tests replace it with a function returning t.TempDir() and
-// restore it via t.Cleanup so no test ever touches the developer's real
-// ~/.config/homelab/config.json. defaultConfigDir honors HOMELAB_CONFIG_DIR
-// for ad-hoc dev convenience only — tests MUST swap the var, not rely on env.
+// ConfigDirFn is the swappable seam for the config directory (REQ-CFG-007 /
+// SC-CFG-008). Tests in OTHER packages (e.g. cli/internal/cmd) replace it with
+// a function returning t.TempDir() and restore it via t.Cleanup so no test
+// ever touches the developer's real ~/.config/homelab/config.json. It is
+// exported because the seam is consumed and swapped across package boundaries
+// (cmd.resolveClient calls it; cmd tests pin it). defaultConfigDir honors
+// HOMELAB_CONFIG_DIR for ad-hoc dev convenience only — tests MUST swap the var,
+// not rely on env, so env-leakage cannot affect test results.
 //
-// The seam is consumed by cmd.resolveClient (cli/internal/cmd/root.go); until
-// that wiring lands it is intentionally unused at the package level.
-var configDirFn = defaultConfigDir //nolint:unused // wired in cmd.resolveClient (T3)
+// The seam is package-level shared state: tests that swap it MUST NOT run in
+// parallel with other swappers, or the swap/restore/read would race under
+// -race. The cmd test suite keeps seam-pinning tests serial.
+var ConfigDirFn = defaultConfigDir
 
 // defaultConfigDir returns the directory holding config.json: HOMELAB_CONFIG_DIR
 // if set, otherwise os.UserConfigDir()+"/homelab".
-func defaultConfigDir() (string, error) { //nolint:unused // wired in cmd.resolveClient (T3)
+func defaultConfigDir() (string, error) {
 	if v := os.Getenv("HOMELAB_CONFIG_DIR"); v != "" {
 		return v, nil
 	}

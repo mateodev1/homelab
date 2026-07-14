@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/mateo/homelab/cli/internal/config"
 )
 
 // captureHandler records the last request and writes a canned JSON response.
@@ -36,10 +38,32 @@ func (h *captureHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// pinConfigDir swaps the config.ConfigDirFn seam to a fresh temp dir for this
+// test and restores it on cleanup (REQ-CFG-007 / SC-CFG-008). Every cmd test
+// that invokes Execute — and therefore resolveClient, which calls
+// config.Load(config.ConfigDirFn()) — must call this so it never reads or
+// writes the developer's real ~/.config/homelab/config.json.
+//
+// The seam is package-level shared state, so tests that pin it MUST NOT run in
+// parallel with other pinning tests (a parallel swap/restore/read would race
+// under -race). The cmd test suite is therefore serial.
+func pinConfigDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	prev := config.ConfigDirFn
+	config.ConfigDirFn = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { config.ConfigDirFn = prev })
+	return dir
+}
+
 // runRoot wires a root command against a test server, executes args, and
-// returns captured stdout, stderr, and any execution error.
+// returns captured stdout, stderr, and any execution error. It pins the config
+// directory to a fresh temp dir (REQ-CFG-007) so the test never touches the
+// real config file; the explicit --base-url/--api-key flags still win over any
+// (empty) file value.
 func runRoot(t *testing.T, srv *httptest.Server, apiKey string, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
+	pinConfigDir(t)
 	root := NewRootCommand("test")
 	root.SetOut(&bytes.Buffer{})
 	root.SetErr(&bytes.Buffer{})
@@ -53,7 +77,6 @@ func runRoot(t *testing.T, srv *httptest.Server, apiKey string, args ...string) 
 }
 
 func TestTodoList_ParsesJSON(t *testing.T) {
-	t.Parallel()
 	srvResp := []byte(`[{"id":1,"title":"a","body":"","status":"todo","priority":0,"due_date":null,"kind":"note","issue_type":null,"project_id":null,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}]`)
 	h := &captureHandler{status: http.StatusOK, resp: srvResp}
 	srv := httptest.NewServer(h)
@@ -79,7 +102,6 @@ func TestTodoList_ParsesJSON(t *testing.T) {
 }
 
 func TestTodoList_FiltersInQuery(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte("[]")}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
@@ -100,7 +122,6 @@ func TestTodoList_FiltersInQuery(t *testing.T) {
 }
 
 func TestTodoDone_SendsStatusDoneBody(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte(`{"id":3,"title":"x","body":"","status":"done","priority":0,"due_date":null,"kind":"note","issue_type":null,"project_id":null,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}`)}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
@@ -128,7 +149,6 @@ func TestTodoDone_SendsStatusDoneBody(t *testing.T) {
 }
 
 func TestTodoUpdate_ClearsDueDateWithLiteralNull(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte(`{"id":1,"title":"x","body":"","status":"todo","priority":0,"due_date":null,"kind":"note","issue_type":null,"project_id":null,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}`)}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
@@ -143,7 +163,6 @@ func TestTodoUpdate_ClearsDueDateWithLiteralNull(t *testing.T) {
 }
 
 func TestTodoUpdate_OmitsUnsetKeys(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte(`{"id":1,"title":"x","body":"","status":"todo","priority":0,"due_date":null,"kind":"note","issue_type":null,"project_id":null,"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}`)}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
@@ -162,12 +181,12 @@ func TestTodoUpdate_OmitsUnsetKeys(t *testing.T) {
 }
 
 func TestHealth_NoAPIKeyRequired(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte(`{"status":"ok","db_ok":true}`)}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	root := NewRootCommand("test")
+	pinConfigDir(t)
 	root.SetArgs([]string{"--base-url", srv.URL, "health"})
 	outBuf := &bytes.Buffer{}
 	root.SetOut(outBuf)
@@ -183,12 +202,12 @@ func TestHealth_NoAPIKeyRequired(t *testing.T) {
 }
 
 func TestRequiresAPIKey_MissingKeyErrorsInProd(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte("[]")}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	root := NewRootCommand("test")
+	pinConfigDir(t)
 	root.SetArgs([]string{"--base-url", srv.URL, "--env=production", "todo", "list"})
 	errBuf := &bytes.Buffer{}
 	root.SetErr(errBuf)
@@ -202,12 +221,12 @@ func TestRequiresAPIKey_MissingKeyErrorsInProd(t *testing.T) {
 }
 
 func TestTodoList_DevWithoutAPIKeyDoesNotRequireKey(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusOK, resp: []byte("[]")}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	root := NewRootCommand("test")
+	pinConfigDir(t)
 	root.SetArgs([]string{"--base-url", srv.URL, "todo", "list"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("dev todo list must not require an api key: %v", err)
@@ -219,12 +238,12 @@ func TestTodoList_DevWithoutAPIKeyDoesNotRequireKey(t *testing.T) {
 }
 
 func TestTodoAdd_InvalidPriorityRejected(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusCreated}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	root := NewRootCommand("test")
+	pinConfigDir(t)
 	root.SetArgs([]string{"--base-url", srv.URL, "--api-key", "k", "todo", "add", "--title=x", "--priority=9"})
 	root.SetErr(&bytes.Buffer{})
 	err := root.Execute()
@@ -237,12 +256,12 @@ func TestTodoAdd_InvalidPriorityRejected(t *testing.T) {
 }
 
 func TestProjectDelete_WarnsBeforeDelete(t *testing.T) {
-	t.Parallel()
 	h := &captureHandler{status: http.StatusNoContent}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)
 
 	root := NewRootCommand("test")
+	pinConfigDir(t)
 	root.SetArgs([]string{"--base-url", srv.URL, "--api-key", "k", "project", "delete", "5", "--yes"})
 	errBuf := &bytes.Buffer{}
 	root.SetErr(errBuf)
@@ -254,6 +273,56 @@ func TestProjectDelete_WarnsBeforeDelete(t *testing.T) {
 	}
 	if h.lastMethod != http.MethodDelete || h.lastPath != "/api/projects/5" {
 		t.Errorf("delete request wrong: %s %s", h.lastMethod, h.lastPath)
+	}
+}
+
+// TestHealth_ReadsBaseURLFromFile covers SC-CFG-009 / REQ-CFG-008: an existing
+// command (health) consumes the config file's base_url when no --base-url flag
+// is passed, and an explicit --base-url flag still overrides the file.
+func TestHealth_ReadsBaseURLFromFile(t *testing.T) {
+	dir := pinConfigDir(t)
+
+	// file server — the config file's base_url points here.
+	fileH := &captureHandler{status: http.StatusOK, resp: []byte(`{"status":"ok","db_ok":true}`)}
+	fileSrv := httptest.NewServer(fileH)
+	t.Cleanup(fileSrv.Close)
+
+	if err := config.Save(dir, config.Config{BaseURL: fileSrv.URL, Env: "development"}); err != nil {
+		t.Fatalf("seed config file: %v", err)
+	}
+
+	// Without --base-url: resolveClient must Load the file and use fileSrv.URL.
+	root := NewRootCommand("test")
+	root.SetArgs([]string{"health"})
+	outBuf := &bytes.Buffer{}
+	root.SetOut(outBuf)
+	if err := root.Execute(); err != nil {
+		t.Fatalf("health without --base-url: %v", err)
+	}
+	if fileH.lastPath != "/api/health" {
+		t.Fatalf("file base_url not used by health: lastPath=%q (want /api/health)", fileH.lastPath)
+	}
+	if !strings.Contains(outBuf.String(), `"ok"`) {
+		t.Errorf("health output: %s", outBuf.String())
+	}
+
+	// With --base-url=override: the flag must win over the file, hitting the
+	// override server and NOT the file server.
+	flagH := &captureHandler{status: http.StatusOK, resp: []byte(`{"status":"ok","db_ok":true}`)}
+	flagSrv := httptest.NewServer(flagH)
+	t.Cleanup(flagSrv.Close)
+	fileH.lastPath = "" // reset to confirm file server is not hit again
+
+	root2 := NewRootCommand("test")
+	root2.SetArgs([]string{"--base-url", flagSrv.URL, "health"})
+	if err := root2.Execute(); err != nil {
+		t.Fatalf("health with --base-url override: %v", err)
+	}
+	if flagH.lastPath != "/api/health" {
+		t.Fatalf("override base_url not used: lastPath=%q (want /api/health)", flagH.lastPath)
+	}
+	if fileH.lastPath != "" {
+		t.Fatalf("file server should NOT be hit when --base-url is set, but got %q", fileH.lastPath)
 	}
 }
 

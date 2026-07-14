@@ -58,11 +58,29 @@ func NewRootCommand(version string) *cobra.Command {
 // i.e. production) AND no key is available. In development RequireAuth is
 // false, so no command ever requires a key — dev is fully open, matching the
 // backend.
+// resolveClient reads the persistent flags from cmd, loads the config file,
+// resolves config, and returns an HTTP client. The config file is loaded once
+// and merged via ResolveWithFile (flags > env > file > defaults, REQ-CFG-004).
+// Load errors are intentionally ignored: a missing or corrupt config file
+// yields a zero file Config, so resolution falls back to env/defaults rather
+// than hobbling the command — the file is a convenience layer, not a hard
+// dependency (REQ-CFG-008). requireKey reflects the per-command auth need:
+// health passes false (always auth-free), every other command passes true.
+// The actual "api key required" error fires only when the command needs a key
+// (requireKey) AND the resolved environment requires auth (cfg.RequireAuth,
+// i.e. production) AND no key is available. In development RequireAuth is
+// false, so no command ever requires a key — dev is fully open, matching the
+// backend.
 func resolveClient(cmd *cobra.Command, requireKey bool) (*client.Client, error) {
 	baseURL, _ := cmd.Flags().GetString(flagBaseURL)
 	apiKey, _ := cmd.Flags().GetString(flagAPIKey)
 	env, _ := cmd.Flags().GetString(flagEnv)
-	cfg := config.Resolve(baseURL, apiKey, env)
+
+	var file config.Config
+	if dir, dirErr := config.ConfigDirFn(); dirErr == nil {
+		file, _ = config.Load(dir) // missing/corrupt file -> zero Config, fall back to env/defaults
+	}
+	cfg := config.ResolveWithFile(file, baseURL, apiKey, env)
 
 	if requireKey && cfg.RequireAuth && cfg.APIKey == "" {
 		return nil, fmt.Errorf("api key required: pass --api-key or set %s", config.EnvAPIKey)
