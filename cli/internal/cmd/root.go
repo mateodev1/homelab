@@ -46,6 +46,7 @@ func NewRootCommand(version string) *cobra.Command {
 	root.AddCommand(newHealthCmd())
 	root.AddCommand(newTodoCmd())
 	root.AddCommand(newProjectCmd())
+	root.AddCommand(newLoginCmd())
 
 	return root
 }
