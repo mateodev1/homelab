@@ -235,3 +235,31 @@ func TestLogin_ProdEmptyInputExitsNonZero(t *testing.T) {
 		t.Fatalf("config file must NOT be written on login failure: stat err=%v", statErr)
 	}
 }
+
+// TestLogin_APIKeyFlagIgnoredWithWarning covers SC-LOGIN-008 / REQ-LOGIN-008:
+// --api-key is ignored with a stderr warning, the stored key comes from stdin
+// (not the flag), and --base-url is honored into the persisted file.
+func TestLogin_APIKeyFlagIgnoredWithWarning(t *testing.T) {
+	dir := pinConfigDir(t)
+	swapReadSecret(t, stubSecretReader(strings.NewReader("real\n")))
+
+	root := NewRootCommand("test")
+	var errBuf bytes.Buffer
+	root.SetErr(&errBuf)
+	root.SetArgs([]string{"login", "--env", "production", "--api-key=ignored", "--base-url=http://example.test"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	if !strings.Contains(errBuf.String(), "--api-key is ignored") {
+		t.Fatalf("stderr missing --api-key warning; got %q", errBuf.String())
+	}
+
+	cfg := loadLoggedConfig(t, dir)
+	if cfg.APIKey != "real" {
+		t.Fatalf("api key = %q, want 'real' from stdin (flag ignored)", cfg.APIKey)
+	}
+	if cfg.BaseURL != "http://example.test" {
+		t.Fatalf("base url = %q, want http://example.test (flag honored)", cfg.BaseURL)
+	}
+}

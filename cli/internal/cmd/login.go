@@ -75,6 +75,23 @@ func newLoginCmd() *cobra.Command {
 // runLogin resolves the environment, optionally reads the API key from stdin
 // (production only), and writes the config file.
 func runLogin(cmd *cobra.Command, _ []string) error {
+	// REQ-LOGIN-008 (flag surface): --api-key is ignored by login (stdin is the
+	// source of truth in production; dev has no secret). Emit a stderr warning
+	// and never read its value. Written to cmd.ErrOrStderr() so it streams to
+	// os.Stderr in production and stays testable via cobra's writer in tests.
+	if cmd.Flags().Changed(flagAPIKey) {
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "warning: --api-key is ignored by login; the API key is read from stdin")
+	}
+
+	// base_url: honor --base-url iff changed (an explicit empty string is
+	// honored); otherwise use the built-in default. Login does NOT reuse the
+	// resolver here — env/flag precedence is the resolver's concern; login's
+	// write set is just {base_url, api_key, env} (design Q2).
+	baseURL := config.DefaultBaseURL
+	if cmd.Flags().Changed(flagBaseURL) {
+		baseURL, _ = cmd.Flags().GetString(flagBaseURL)
+	}
+
 	// Env resolution (REQ-LOGIN-001/002/005): explicit --env (Changed) wins;
 	// else the existing config file's env; else the built-in default development.
 	env := config.DefaultEnv
@@ -109,5 +126,5 @@ func runLogin(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("resolve config dir: %w", err)
 	}
-	return config.Save(dir, config.Config{BaseURL: config.DefaultBaseURL, APIKey: apiKey, Env: env})
+	return config.Save(dir, config.Config{BaseURL: baseURL, APIKey: apiKey, Env: env})
 }
