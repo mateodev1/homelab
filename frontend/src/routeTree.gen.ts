@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTodosRouteImport } from './routes/_authenticated/todos'
+import { Route as AuthenticatedSecretsRouteImport } from './routes/_authenticated/secrets'
 import { Route as AuthenticatedTodosIndexRouteImport } from './routes/_authenticated/todos.index'
 import { Route as AuthenticatedTodosIdRouteImport } from './routes/_authenticated/todos.$id'
 
@@ -29,6 +30,11 @@ const AuthenticatedTodosRoute = AuthenticatedTodosRouteImport.update({
   path: '/todos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSecretsRoute = AuthenticatedSecretsRouteImport.update({
+  id: '/secrets',
+  path: '/secrets',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTodosIndexRoute = AuthenticatedTodosIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -42,12 +48,14 @@ const AuthenticatedTodosIdRoute = AuthenticatedTodosIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/secrets': typeof AuthenticatedSecretsRoute
   '/todos': typeof AuthenticatedTodosRouteWithChildren
   '/todos/$id': typeof AuthenticatedTodosIdRoute
   '/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/secrets': typeof AuthenticatedSecretsRoute
   '/todos/$id': typeof AuthenticatedTodosIdRoute
   '/todos': typeof AuthenticatedTodosIndexRoute
 }
@@ -55,19 +63,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/secrets': typeof AuthenticatedSecretsRoute
   '/_authenticated/todos': typeof AuthenticatedTodosRouteWithChildren
   '/_authenticated/todos/$id': typeof AuthenticatedTodosIdRoute
   '/_authenticated/todos/': typeof AuthenticatedTodosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/todos' | '/todos/$id' | '/todos/'
+  fullPaths: '/' | '/secrets' | '/todos' | '/todos/$id' | '/todos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/todos/$id' | '/todos'
+  to: '/' | '/secrets' | '/todos/$id' | '/todos'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/secrets'
     | '/_authenticated/todos'
     | '/_authenticated/todos/$id'
     | '/_authenticated/todos/'
@@ -101,6 +111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTodosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/secrets': {
+      id: '/_authenticated/secrets'
+      path: '/secrets'
+      fullPath: '/secrets'
+      preLoaderRoute: typeof AuthenticatedSecretsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/todos/': {
       id: '/_authenticated/todos/'
       path: '/'
@@ -132,10 +149,12 @@ const AuthenticatedTodosRouteWithChildren =
   AuthenticatedTodosRoute._addFileChildren(AuthenticatedTodosRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedSecretsRoute: typeof AuthenticatedSecretsRoute
   AuthenticatedTodosRoute: typeof AuthenticatedTodosRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedSecretsRoute: AuthenticatedSecretsRoute,
   AuthenticatedTodosRoute: AuthenticatedTodosRouteWithChildren,
 }
 

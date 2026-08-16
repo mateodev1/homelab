@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useAuth0 } from '@auth0/auth0-react';
-import { CheckSquare, Moon, Plus, Sun, Trash2 } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { CheckSquare, KeyRound, Moon, Plus, Sun, Trash2 } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import type { Project } from '../types/project';
@@ -90,6 +91,13 @@ export function Sidebar({
             C
           </kbd>
         </Button>
+        <Link
+          to="/secrets"
+          className="mb-2 flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-accent/60"
+        >
+          <KeyRound aria-hidden="true" className="size-4" />
+          Secrets
+        </Link>
       </div>
 
       <nav aria-label="Task views" className="flex-1 overflow-y-auto px-2">
