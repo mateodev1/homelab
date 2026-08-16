@@ -34,6 +34,7 @@ homelab
 - Crear, editar, eliminar y buscar secretos.
 - Ocultar valores por defecto.
 - Revelar o copiar un secreto individual.
+- Pegar e importar un archivo `.env` completo.
 - Copiar todos los secretos del entorno seleccionado.
 - Descargar todos los secretos como archivo `.env`.
 - Exportar todos los secretos aunque la vista tenga filtros activos.
@@ -57,12 +58,14 @@ El serializador debe soportar espacios, comillas, caracteres especiales y valore
 ```text
 GET /products/{product}/projects/{project}/environments/{environment}/secrets
 GET /products/{product}/projects/{project}/environments/{environment}/secrets/export
+POST /products/{product}/projects/{project}/environments/{environment}/import
 POST /products/{product}/projects/{project}/environments/{environment}/secrets
 PUT /products/{product}/projects/{project}/environments/{environment}/secrets/{key}
 DELETE /products/{product}/projects/{project}/environments/{environment}/secrets/{key}
 ```
 
 El endpoint de exportación debe responder `text/plain` y aplicar los permisos del entorno.
+La importación debe hacer upsert de las claves pegadas y preservar las claves ausentes.
 
 ## Seguridad
 
@@ -93,6 +96,7 @@ La nueva estructura debe convertir:
 ## Criterios De Aceptación
 
 - Un usuario puede seleccionar producto, proyecto y entorno.
+- Puede pegar un `.env` completo y actualizarlo con una sola acción.
 - Puede copiar todo el entorno con una sola acción.
 - Puede descargarlo como `.env`.
 - Los filtros de búsqueda no limitan la exportación.

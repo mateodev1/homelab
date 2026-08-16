@@ -291,3 +291,79 @@ func TestSecretService_Audit_WritesEntriesForEveryAction(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDotenv_SupportsCommonFormsAndDuplicateKeys(t *testing.T) {
+	values, err := service.ParseDotenv("# comment\nexport API_KEY=first\nAPI_KEY=second\nEMPTY=\nQUOTED=\"line1\\nline2\"\nSINGLE='literal # value'\n")
+	if err != nil {
+		t.Fatalf("parse dotenv: %v", err)
+	}
+
+	want := map[string]string{
+		"API_KEY": "second",
+		"EMPTY":   "",
+		"QUOTED":  "line1\nline2",
+		"SINGLE":  "literal # value",
+	}
+	if len(values) != len(want) {
+		t.Fatalf("expected %d values, got %d", len(want), len(values))
+	}
+	for key, value := range want {
+		if values[key] != value {
+			t.Fatalf("expected %s=%q, got %q", key, value, values[key])
+		}
+	}
+}
+
+func TestSecretService_ImportEnvironment_UpsertsAndPreservesMissingKeys(t *testing.T) {
+	t.Parallel()
+	svc, project, s := newSecretService(t)
+	ctx := context.Background()
+
+	if _, err := svc.CreateSecret(ctx, project.ID, domain.EnvDevelopment, "KEEP", "old", "api-key"); err != nil {
+		t.Fatalf("create existing secret: %v", err)
+	}
+	count, err := svc.ImportEnvironment(ctx, project.ID, domain.EnvDevelopment, "KEEP=updated\nNEW=created\n", "api-key")
+	if err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("expected 2 imported secrets, got %d", count)
+	}
+
+	keep, err := svc.RevealSecret(ctx, project.ID, domain.EnvDevelopment, "KEEP", "api-key")
+	if err != nil {
+		t.Fatalf("reveal keep: %v", err)
+	}
+	if keep != "updated" {
+		t.Fatalf("expected updated KEEP, got %q", keep)
+	}
+	newValue, err := svc.RevealSecret(ctx, project.ID, domain.EnvDevelopment, "NEW", "api-key")
+	if err != nil {
+		t.Fatalf("reveal new: %v", err)
+	}
+	if newValue != "created" {
+		t.Fatalf("expected created NEW, got %q", newValue)
+	}
+
+	envs, err := svc.ListEnvironments(ctx, project.ID)
+	if err != nil {
+		t.Fatalf("list environments: %v", err)
+	}
+	var envID int64
+	for _, env := range envs {
+		if env.Name == domain.EnvDevelopment {
+			envID = env.ID
+		}
+	}
+	logs, err := s.GetAuditLogs(ctx, envID)
+	if err != nil {
+		t.Fatalf("get audit logs: %v", err)
+	}
+	if len(logs) != 5 {
+		t.Fatalf("expected create + import + 2 reveal audit logs, got %d", len(logs))
+	}
+	if logs[1].Action != domain.AuditActionImport || logs[1].SecretKey != "KEEP" ||
+		logs[2].Action != domain.AuditActionImport || logs[2].SecretKey != "NEW" {
+		t.Fatalf("unexpected import audit log sequence: %+v", logs)
+	}
+}

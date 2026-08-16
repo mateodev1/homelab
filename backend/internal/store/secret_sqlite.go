@@ -280,6 +280,31 @@ func (s *SQLiteStore) UpdateSecret(ctx context.Context, secret *domain.Secret) e
 	return nil
 }
 
+// UpsertSecrets atomically creates or updates a batch of encrypted secrets.
+// Existing keys not present in the batch are intentionally left untouched.
+func (s *SQLiteStore) UpsertSecrets(ctx context.Context, environmentID int64, secrets []*domain.Secret) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("store.UpsertSecrets begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	const q = `INSERT INTO secrets (environment_id, key, value_encrypted, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(environment_id, key) DO UPDATE SET value_encrypted = excluded.value_encrypted, updated_at = excluded.updated_at`
+	now := time.Now().UTC().Format(time.RFC3339)
+	for _, secret := range secrets {
+		if _, err := tx.ExecContext(ctx, q, environmentID, secret.Key, secret.ValueEncrypted, now, now); err != nil {
+			return fmt.Errorf("store.UpsertSecrets %q: %w", secret.Key, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("store.UpsertSecrets commit: %w", err)
+	}
+	return nil
+}
+
 // DeleteSecret removes the Secret with the given key from an environment.
 func (s *SQLiteStore) DeleteSecret(ctx context.Context, environmentID int64, key string) error {
 	res, err := s.db.ExecContext(ctx, `DELETE FROM secrets WHERE environment_id = ? AND key = ?`, environmentID, key)

@@ -29,6 +29,7 @@ type SecretServicer interface {
 	UpdateSecret(ctx context.Context, projectID int64, envName, key, value, actor string) (service.SecretMeta, error)
 	DeleteSecret(ctx context.Context, projectID int64, envName, key, actor string) error
 	ExportEnvironment(ctx context.Context, projectID int64, envName, actor string) (string, error)
+	ImportEnvironment(ctx context.Context, projectID int64, envName, content, actor string) (int, error)
 }
 
 // SecretHandler handles HTTP requests for the secret manager hierarchy
@@ -64,6 +65,7 @@ func (h *SecretHandler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/products/{productID}/projects/{projectID}/environments/{envName}/secrets/{key}/reveal", h.RevealSecret)
 
 	mux.HandleFunc("GET /api/products/{productID}/projects/{projectID}/environments/{envName}/export", h.Export)
+	mux.HandleFunc("POST /api/products/{productID}/projects/{projectID}/environments/{envName}/import", h.Import)
 }
 
 // --- Products ---
@@ -380,6 +382,40 @@ func (h *SecretHandler) Export(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(body))
+}
+
+// Import parses and upserts a complete dotenv document into the environment.
+// Keys missing from the document are intentionally preserved.
+func (h *SecretHandler) Import(w http.ResponseWriter, r *http.Request) {
+	projectID, err := pathInt64(r, "projectID")
+	if err != nil {
+		jsonError(w, "invalid project id", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	count, err := h.svc.ImportEnvironment(r.Context(), projectID, r.PathValue("envName"), req.Content, h.actor(r))
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			jsonError(w, "not found", http.StatusNotFound)
+			return
+		}
+		if strings.HasPrefix(err.Error(), "invalid dotenv") {
+			jsonError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		jsonError(w, "failed to import secrets", http.StatusInternalServerError)
+		return
+	}
+
+	jsonOK(w, map[string]int{"imported": count})
 }
 
 // --- helpers ---

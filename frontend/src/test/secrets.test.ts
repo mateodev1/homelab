@@ -3,6 +3,7 @@ import {
   createSecret,
   exportSecrets,
   getSecrets,
+  importSecrets,
   revealSecret,
   updateSecret,
 } from '../api/secrets';
@@ -120,6 +121,25 @@ describe('secrets API client', () => {
 
     await expect(exportSecrets('test-token', 2, 3, 'production')).rejects.toEqual(
       new ApiError(403, 'forbidden'),
+    );
+  });
+
+  it('imports a complete dotenv document into the selected environment', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValueOnce({ imported: 2 }),
+    });
+
+    await expect(
+      importSecrets('test-token', 2, 3, 'production', 'API_KEY="secret"\nPORT=8080\n'),
+    ).resolves.toEqual({ imported: 2 });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/products/2/projects/3/environments/production/import',
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'API_KEY="secret"\nPORT=8080\n' }),
+      },
     );
   });
 });

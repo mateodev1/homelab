@@ -199,9 +199,10 @@ deployments without that variable use a stable compatibility key derived from
 secrets remain decryptable.
 
 The environment screen supports revealing individual values, copying the full
-environment, and downloading the complete environment as `.env`. Bulk export
-always includes every secret in the selected environment, regardless of UI
-filters.
+environment, importing a pasted `.env`, and downloading the complete
+environment as `.env`. Imports upsert the pasted keys and preserve existing
+keys that are not present in the document. Bulk export always includes every
+secret in the selected environment, regardless of UI filters.
 
 ## Deployment
 

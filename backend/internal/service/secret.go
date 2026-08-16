@@ -273,6 +273,100 @@ func (s *SecretService) ExportEnvironment(ctx context.Context, projectID int64, 
 	return b.String(), nil
 }
 
+// ImportEnvironment parses dotenv content and atomically upserts every key in
+// the selected environment. Existing keys not present in the document remain.
+func (s *SecretService) ImportEnvironment(ctx context.Context, projectID int64, envName, content, actor string) (int, error) {
+	env, err := s.resolveEnvironment(ctx, projectID, envName)
+	if err != nil {
+		return 0, err
+	}
+
+	values, err := ParseDotenv(content)
+	if err != nil {
+		return 0, err
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	secrets := make([]*domain.Secret, 0, len(keys))
+	for _, key := range keys {
+		encrypted, err := store.EncryptSecretValue(s.aead, values[key])
+		if err != nil {
+			return 0, fmt.Errorf("service.ImportEnvironment encrypt %q: %w", key, err)
+		}
+		secrets = append(secrets, &domain.Secret{
+			EnvironmentID:  env.ID,
+			Key:            key,
+			ValueEncrypted: encrypted,
+		})
+	}
+
+	if err := s.store.UpsertSecrets(ctx, env.ID, secrets); err != nil {
+		return 0, fmt.Errorf("service.ImportEnvironment: %w", err)
+	}
+	for _, key := range keys {
+		s.audit(ctx, env.ID, key, domain.AuditActionImport, actor)
+	}
+	return len(keys), nil
+}
+
+// ParseDotenv parses common dotenv forms. Blank lines and comments are
+// ignored, export prefixes are accepted, and the last duplicate key wins.
+func ParseDotenv(content string) (map[string]string, error) {
+	values := make(map[string]string)
+	for lineNumber, rawLine := range strings.Split(strings.TrimPrefix(content, "\ufeff"), "\n") {
+		line := strings.TrimSpace(strings.TrimSuffix(rawLine, "\r"))
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		separator := strings.IndexByte(line, '=')
+		if separator <= 0 {
+			return nil, fmt.Errorf("invalid dotenv line %d: expected KEY=value", lineNumber+1)
+		}
+		key := strings.TrimSpace(line[:separator])
+		if key == "" {
+			return nil, fmt.Errorf("invalid dotenv line %d: key is empty", lineNumber+1)
+		}
+		values[key] = parseDotenvValue(strings.TrimSpace(line[separator+1:]))
+	}
+	return values, nil
+}
+
+func parseDotenvValue(value string) string {
+	if len(value) < 2 {
+		return value
+	}
+	if value[0] == '\'' && value[len(value)-1] == '\'' {
+		return value[1 : len(value)-1]
+	}
+	if value[0] != '"' || value[len(value)-1] != '"' {
+		return value
+	}
+
+	value = value[1 : len(value)-1]
+	var b strings.Builder
+	for i := 0; i < len(value); i++ {
+		if value[i] != '\\' || i+1 >= len(value) {
+			b.WriteByte(value[i])
+			continue
+		}
+		i++
+		switch value[i] {
+		case 'n':
+			b.WriteByte('\n')
+		case 'r':
+			b.WriteByte('\r')
+		default:
+			b.WriteByte(value[i])
+		}
+	}
+	return b.String()
+}
+
 // dotenvEscape quotes and escapes a value for safe inclusion in a dotenv
 // file, handling spaces, quotes, backslashes, newlines, '#' and empty values.
 func dotenvEscape(value string) string {

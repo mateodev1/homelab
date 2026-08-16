@@ -179,3 +179,21 @@ export async function exportSecrets(
   }
   return response.text();
 }
+
+export async function importSecrets(
+  token: string,
+  productId: number,
+  projectId: number,
+  environment: SecretEnvironmentName,
+  content: string,
+): Promise<{ imported: number }> {
+  const response = await fetch(
+    `${environmentsPath(productId, projectId)}/${encodeURIComponent(environment)}/import`,
+    {
+      method: 'POST',
+      headers: authorizedHeaders(token, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ content }),
+    },
+  );
+  return parseJSON<{ imported: number }>(response);
+}

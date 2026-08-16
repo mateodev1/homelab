@@ -22,6 +22,7 @@ import {
   getSecretProducts,
   getSecretProjects,
   getSecrets,
+  importSecrets,
   revealSecret,
   updateSecret,
 } from '../api/secrets';
@@ -64,6 +65,8 @@ export function SecretsPage() {
   const [secretValue, setSecretValue] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
+  const [importContent, setImportContent] = useState('');
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -329,6 +332,29 @@ export function SecretsPage() {
     }
   };
 
+  const handleImport = async (event: FormEvent) => {
+    event.preventDefault();
+    if (productId === null || projectId === null || !importContent.trim()) return;
+    if (
+      !window.confirm(
+        'Import and update the pasted secrets? Existing keys not included will be preserved.',
+      )
+    ) {
+      return;
+    }
+    try {
+      setError(null);
+      const token = await getAccessTokenSilently();
+      const result = await importSecrets(token, productId, projectId, environment, importContent);
+      await refreshSecrets();
+      setImportContent('');
+      setImportOpen(false);
+      setMessage(`${result.imported} secrets imported into ${ENVIRONMENT_LABELS[environment]}`);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="flex h-14 items-center justify-between border-b border-border px-4 md:px-8">
@@ -458,6 +484,14 @@ export function SecretsPage() {
                     <Download aria-hidden="true" />
                     Download .env
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImportOpen((open) => !open)}
+                  >
+                    Import .env
+                  </Button>
                 </div>
               ) : null}
             </CardHeader>
@@ -472,6 +506,39 @@ export function SecretsPage() {
             <p className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
               {message}
             </p>
+          ) : null}
+
+          {importOpen && projectId !== null ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Import `.env`</CardTitle>
+                <CardDescription>
+                  Paste a complete dotenv file. Existing keys are updated, new keys are created, and
+                  missing keys are preserved.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleImport} className="grid gap-3">
+                  <Textarea
+                    aria-label="Dotenv content"
+                    rows={10}
+                    value={importContent}
+                    onChange={(event) => setImportContent(event.target.value)}
+                    placeholder={'DATABASE_URL="postgres://..."\nAPI_KEY="..."'}
+                    spellCheck={false}
+                    className="font-mono text-xs"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={() => setImportOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={!importContent.trim()}>
+                      Import secrets
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
           ) : null}
 
           {projectId !== null ? (

@@ -24,6 +24,7 @@ const (
 	AuditActionDelete = "delete"
 	AuditActionReveal = "reveal"
 	AuditActionExport = "export"
+	AuditActionImport = "import"
 )
 
 // Product is the top level of the secret hierarchy:
@@ -100,6 +101,7 @@ type SecretStore interface {
 	GetSecretsByEnvironment(ctx context.Context, environmentID int64) ([]*Secret, error)
 	GetSecretByKey(ctx context.Context, environmentID int64, key string) (*Secret, error)
 	UpdateSecret(ctx context.Context, secret *Secret) error
+	UpsertSecrets(ctx context.Context, environmentID int64, secrets []*Secret) error
 	DeleteSecret(ctx context.Context, environmentID int64, key string) error
 
 	CreateAuditLog(ctx context.Context, log *SecretAuditLog) error
