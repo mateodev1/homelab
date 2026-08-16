@@ -67,6 +67,19 @@
   --ring: #52525b;
 }
 
+select {
+  color-scheme: light;
+}
+
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
