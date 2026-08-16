@@ -13,10 +13,10 @@ categories of checks, but some jobs use GitHub Actions directly instead of the `
 pnpm --dir frontend install
 task lint   # lint Go + frontend
 task test   # test Go + frontend
-task build  # build Go backend + CLI
+task build  # build Go backend + CLI + MCP
 pnpm --dir frontend run type-check
 pnpm --dir frontend run coverage
-rm -f api homelab
+rm -f api homelab homelab-mcp
 git status --short
 ```
 
@@ -24,7 +24,7 @@ Expected result before deploy:
 
 - Every command exits with code `0`.
 - `git status --short` shows only intentional source/doc changes.
-- No root-level `api` or `homelab` binaries remain after `task build`.
+- No root-level `api`, `homelab`, or `homelab-mcp` binaries remain after `task build`.
 
 ---
 
@@ -166,7 +166,7 @@ build ──→ build-and-push-backend ──┐
 | `test-go` | always | `go test -race`, coverage ≥ 60% | `backend/go.mod` |
 | `lint-frontend` | always | Biome `check` + `tsc --noEmit` | `frontend/biome.json` |
 | `test-frontend` | always | Vitest with coverage | `frontend/vitest.config` |
-| `build` | always | `go build ./backend/cmd/api`, `go build ./cli/cmd/homelab` | — |
+| `build` | always | `go build ./backend/cmd/api`, `go build ./cli/cmd/homelab`, `go build ./cli/cmd/homelab-mcp` | — |
 | `build-and-push-backend` | tag only | `docker/build-push-action@v6`, pushes to GHCR | `docker/backend.Dockerfile` |
 | `build-and-push-frontend` | tag only | `docker/build-push-action@v6`, pushes to GHCR | `docker/frontend.Dockerfile` |
 | `deploy` | tag only | `docker compose pull && up -d` on self-hosted runner | `environment: homelab` |
@@ -187,7 +187,7 @@ task test
 task build
 pnpm --dir frontend run type-check
 pnpm --dir frontend run coverage
-rm -f api homelab
+rm -f api homelab homelab-mcp
 git status --short
 ```
 

@@ -263,3 +263,32 @@ func TestLogin_APIKeyFlagIgnoredWithWarning(t *testing.T) {
 		t.Fatalf("base url = %q, want http://example.test (flag honored)", cfg.BaseURL)
 	}
 }
+
+// TestLogin_PrintsSuccessMessage covers the UX confirmation printed after a
+// successful write so a silent exit is not mistaken for a no-op.
+func TestLogin_PrintsSuccessMessage(t *testing.T) {
+	dir := pinConfigDir(t)
+	swapReadSecret(t, func() (string, error) {
+		t.Error("dev login must not prompt")
+		return "", errors.New("unexpected")
+	})
+
+	root := NewRootCommand("test")
+	var outBuf bytes.Buffer
+	root.SetOut(&outBuf)
+	root.SetArgs([]string{"login"})
+	if err := root.Execute(); err != nil {
+		t.Fatalf("dev login: %v", err)
+	}
+
+	out := outBuf.String()
+	if !strings.Contains(out, "Logged in (development)") {
+		t.Fatalf("stdout missing success line; got %q", out)
+	}
+	if !strings.Contains(out, config.ConfigPath(dir)) {
+		t.Fatalf("stdout missing config path %q; got %q", config.ConfigPath(dir), out)
+	}
+	if !strings.Contains(out, config.DefaultBaseURL) {
+		t.Fatalf("stdout missing base_url; got %q", out)
+	}
+}

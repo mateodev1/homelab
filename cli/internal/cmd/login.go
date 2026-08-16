@@ -126,5 +126,9 @@ func runLogin(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("resolve config dir: %w", err)
 	}
-	return config.Save(dir, config.Config{BaseURL: baseURL, APIKey: apiKey, Env: env})
+	if err := config.Save(dir, config.Config{BaseURL: baseURL, APIKey: apiKey, Env: env}); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Logged in (%s) → %s\n  base_url: %s\n", env, config.ConfigPath(dir), baseURL)
+	return nil
 }
