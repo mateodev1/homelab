@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useTodos } from '../hooks/useTodos';
+import { TODO_REFRESH_INTERVAL_MS, useTodos } from '../hooks/useTodos';
 import type { Todo } from '../types/todo';
 
 vi.mock('../api/todos', () => ({
@@ -61,6 +61,37 @@ describe('useTodos', () => {
 
     expect(result.current.todos).toEqual(todos);
     expect(result.current.error).toBeNull();
+  });
+
+  it('refreshes todos periodically without showing the initial loading state', async () => {
+    vi.useFakeTimers();
+
+    const initialTodo = makeTodo({ title: 'Initial task' });
+    const refreshedTodo = makeTodo({ title: 'Created externally' });
+    mockedGetTodos.mockResolvedValueOnce([initialTodo]).mockResolvedValueOnce([refreshedTodo]);
+
+    const { result, unmount } = renderHook(() => useTodos());
+
+    try {
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(result.current.loading).toBe(false);
+      expect(result.current.todos).toEqual([initialTodo]);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(TODO_REFRESH_INTERVAL_MS);
+      });
+
+      expect(mockedGetTodos).toHaveBeenCalledTimes(2);
+      expect(result.current.loading).toBe(false);
+      expect(result.current.todos).toEqual([refreshedTodo]);
+    } finally {
+      unmount();
+      vi.useRealTimers();
+    }
   });
 
   it('sets error state when initial load fails', async () => {
