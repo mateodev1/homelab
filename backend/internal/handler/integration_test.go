@@ -33,14 +33,26 @@ func newTestServer(t *testing.T) (*httptest.Server, func()) {
 	todoSvc := service.NewTodoService(todoStore)
 	projectSvc := service.NewProjectService(todoStore)
 
+	testKey, _, err := store.ResolveEncryptionKey("test-fixed-key", "")
+	if err != nil {
+		t.Fatalf("resolve test encryption key: %v", err)
+	}
+	aead, err := store.NewGCMCipher(testKey)
+	if err != nil {
+		t.Fatalf("new test cipher: %v", err)
+	}
+	secretSvc := service.NewSecretService(todoStore, aead)
+
 	checker := &dbHealthChecker{db: db}
 
 	mux := http.NewServeMux()
 	todoHandler := handler.NewTodoHandler(todoSvc)
 	projectHandler := handler.NewProjectHandler(projectSvc)
+	secretHandler := handler.NewSecretHandler(secretSvc, "test-api-key")
 	healthHandler := handler.NewHealthHandler(checker)
 	todoHandler.Register(mux)
 	projectHandler.Register(mux)
+	secretHandler.Register(mux)
 	healthHandler.Register(mux)
 
 	chain := handler.RecoveryMiddleware(handler.LoggingMiddleware(handler.CORSMiddleware(mux)))

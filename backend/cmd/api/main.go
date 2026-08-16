@@ -31,6 +31,8 @@ func main() {
 	auth0Domain := os.Getenv("AUTH0_DOMAIN")
 	auth0Audience := os.Getenv("AUTH0_AUDIENCE")
 
+	secretsEncryptionKey := os.Getenv("SECRETS_ENCRYPTION_KEY")
+
 	if env == "production" && apiKey == "" {
 		log.Fatalf("API_KEY must be set when ENV=production")
 	}
@@ -63,13 +65,46 @@ func main() {
 	svc := service.NewTodoService(s)
 	projectSvc := service.NewProjectService(s)
 
+	encryptionKey, derivedFromAPIKey, err := store.ResolveEncryptionKey(secretsEncryptionKey, apiKey)
+	if err != nil {
+		if env == "production" {
+			log.Fatalf("store.ResolveEncryptionKey: %v", err)
+		}
+		// Dev/test runtime with neither SECRETS_ENCRYPTION_KEY nor API_KEY set:
+		// fall back to a fixed, clearly-insecure dev key so local development
+		// keeps working without extra setup. Never used when ENV=production.
+		log.Printf("WARNING: no SECRETS_ENCRYPTION_KEY or API_KEY set; using an " +
+			"insecure fixed development encryption key for secrets at rest. This " +
+			"is only acceptable outside production.")
+		encryptionKey, _, err = store.ResolveEncryptionKey("insecure-development-only-key", "")
+		if err != nil {
+			log.Fatalf("store.ResolveEncryptionKey dev fallback: %v", err)
+		}
+	}
+	if derivedFromAPIKey {
+		// SECRETS_ENCRYPTION_KEY is unset — warn loudly so operators can set a
+		// dedicated key. This is production runtime only (cmd/api/main.go is
+		// never invoked from tests), so the warning never fires in test runs.
+		log.Printf("WARNING: SECRETS_ENCRYPTION_KEY is not set; deriving the secrets " +
+			"encryption key from API_KEY for backward compatibility. Set " +
+			"SECRETS_ENCRYPTION_KEY explicitly to decouple secret encryption from " +
+			"the API authentication credential.")
+	}
+	aead, err := store.NewGCMCipher(encryptionKey)
+	if err != nil {
+		log.Fatalf("store.NewGCMCipher: %v", err)
+	}
+	secretSvc := service.NewSecretService(s, aead)
+
 	todoHandler := handler.NewTodoHandler(svc)
 	projectHandler := handler.NewProjectHandler(projectSvc)
+	secretHandler := handler.NewSecretHandler(secretSvc, apiKey)
 	healthHandler := handler.NewHealthHandler(sqlHealthChecker{db: db})
 
 	mux := http.NewServeMux()
 	todoHandler.Register(mux)
 	projectHandler.Register(mux)
+	secretHandler.Register(mux)
 	healthHandler.Register(mux)
 
 	requireAuth := env == "production"
