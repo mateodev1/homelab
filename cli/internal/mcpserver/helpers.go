@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/mateo/homelab/cli/internal/dto"
@@ -38,6 +39,67 @@ func todoPath(id int64) string {
 
 func projectPath(id int64) string {
 	return fmt.Sprintf("/api/projects/%d", id)
+}
+
+// productsPath builds /api/products.
+func productsPath() string {
+	return "/api/products"
+}
+
+// secretProjectsPath builds /api/products/{productID}/projects.
+func secretProjectsPath(productID int64) string {
+	return fmt.Sprintf("/api/products/%d/projects", productID)
+}
+
+// secretEnvironmentsPath builds
+// /api/products/{productID}/projects/{projectID}/environments.
+func secretEnvironmentsPath(productID, projectID int64) string {
+	return fmt.Sprintf("/api/products/%d/projects/%d/environments", productID, projectID)
+}
+
+// secretsPath builds .../environments/{envName}/secrets. envName is
+// URL-escaped defensively even though it is validated against a fixed set.
+func secretsPath(productID, projectID int64, envName string) string {
+	return fmt.Sprintf("/api/products/%d/projects/%d/environments/%s/secrets", productID, projectID, url.PathEscape(envName))
+}
+
+// secretKeyPath builds .../secrets/{key}. key is URL-escaped since it is
+// arbitrary caller-supplied input.
+func secretKeyPath(productID, projectID int64, envName, key string) string {
+	return secretsPath(productID, projectID, envName) + "/" + url.PathEscape(key)
+}
+
+// secretRevealPath builds .../secrets/{key}/reveal.
+func secretRevealPath(productID, projectID int64, envName, key string) string {
+	return secretKeyPath(productID, projectID, envName, key) + "/reveal"
+}
+
+// secretExportPath builds .../environments/{envName}/export.
+func secretExportPath(productID, projectID int64, envName string) string {
+	return fmt.Sprintf("/api/products/%d/projects/%d/environments/%s/export", productID, projectID, url.PathEscape(envName))
+}
+
+// validEnvironmentName mirrors the backend's fixed environment set. Kept
+// lenient (not enforced everywhere) since the backend is the source of truth,
+// but used to fail fast on obviously wrong input from an AI caller.
+var validEnvironmentName = map[string]bool{"development": true, "staging": true, "production": true}
+
+// validateSecretScope validates the common productID/projectID/environment
+// triple shared by every secret-level MCP tool.
+func validateSecretScope(productID, projectID int64, environment string) error {
+	if productID <= 0 {
+		return errPositiveID("product_id")
+	}
+	if projectID <= 0 {
+		return errPositiveID("project_id")
+	}
+	if strings.TrimSpace(environment) == "" {
+		return fmt.Errorf("environment is required")
+	}
+	if !validEnvironmentName[environment] {
+		return fmt.Errorf("invalid environment %q: must be development, staging, or production", environment)
+	}
+	return nil
 }
 
 // buildTodoListPath appends optional query filters. project_id accepts a

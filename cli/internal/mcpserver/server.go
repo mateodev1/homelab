@@ -99,4 +99,49 @@ func (s *Server) registerTools(srv *mcp.Server) {
 		Name:        "project_delete",
 		Description: "Delete a project by id (orphans referencing todos by nulling their project_id)",
 	}, s.projectDelete)
+
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_product_list",
+		Description: "List products",
+	}, s.secretProductList)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_product_create",
+		Description: "Create a product",
+	}, s.secretProductCreate)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_project_list",
+		Description: "List secret projects under a product",
+	}, s.secretProjectList)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_project_create",
+		Description: "Create a secret project under a product; auto-provisions development/staging/production environments",
+	}, s.secretProjectCreate)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_environment_list",
+		Description: "List environments under a secret project",
+	}, s.secretEnvironmentList)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_list",
+		Description: "List secret metadata (values masked) in an environment",
+	}, s.secretList)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_create",
+		Description: "Create a secret in an environment",
+	}, s.secretCreate)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_reveal",
+		Description: "Reveal the plaintext value of a secret (explicit, deliberate action)",
+	}, s.secretReveal)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_update",
+		Description: "Update a secret's value",
+	}, s.secretUpdate)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_delete",
+		Description: "Delete a secret by key",
+	}, s.secretDelete)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "secret_export",
+		Description: "Export all secrets in an environment as plaintext dotenv (explicit, deliberate action)",
+	}, s.secretExport)
 }
