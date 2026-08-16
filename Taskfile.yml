@@ -42,6 +42,8 @@ tasks:
     cmds:
       - go build ./backend/cmd/api
       - go build ./cli/cmd/homelab
+      - go build ./cli/cmd/homelab-mcp
+      - rm -f api homelab homelab-mcp
 
   lint:
     desc: "Lint all code"

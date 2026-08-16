@@ -37,6 +37,7 @@ interface UseTodosReturn {
 }
 
 const STATUS_ORDER: TodoStatus[] = ['todo', 'in_progress', 'done', 'cancelled'];
+export const TODO_REFRESH_INTERVAL_MS = 30_000;
 
 function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error';
@@ -67,8 +68,13 @@ export function useTodos(): UseTodosReturn {
 
   useEffect(() => {
     const controller = new AbortController();
+    let isInitialLoad = true;
+    let requestInFlight = false;
 
     const loadTodos = async () => {
+      if (requestInFlight) return;
+      requestInFlight = true;
+
       try {
         setError(null);
         const token = await getAccessTokenSilently();
@@ -80,15 +86,19 @@ export function useTodos(): UseTodosReturn {
         }
         setError(toMessage(err));
       } finally {
-        if (!controller.signal.aborted) {
+        requestInFlight = false;
+        if (isInitialLoad && !controller.signal.aborted) {
           setLoading(false);
         }
+        isInitialLoad = false;
       }
     };
 
     void loadTodos();
+    const refreshInterval = window.setInterval(() => void loadTodos(), TODO_REFRESH_INTERVAL_MS);
 
     return () => {
+      window.clearInterval(refreshInterval);
       controller.abort();
     };
   }, [getAccessTokenSilently]);
