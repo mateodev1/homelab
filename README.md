@@ -152,6 +152,8 @@ go build -o homelab-mcp ./cli/cmd/homelab-mcp
 | `health` | `GET /api/health` |
 | `todo_list` / `todo_get` / `todo_create` / `todo_update` / `todo_done` / `todo_delete` | `/api/todos` |
 | `project_list` / `project_get` / `project_create` / `project_update` / `project_delete` | `/api/projects` |
+| `secret_product_*`, `secret_project_*`, `secret_environment_list` | `/api/products/...` |
+| `secret_list` / `secret_create` / `secret_reveal` / `secret_update` / `secret_delete` / `secret_export` | `/api/products/.../secrets` |
 
 `todo_update` uses boolean `clear_due_date`, `clear_issue_type`, and
 `clear_project_id` to null nullable fields (do not set a value and its `clear_*`
@@ -184,6 +186,22 @@ go build -o bin/homelab-mcp ./cli/cmd/homelab-mcp
 
 Auth mirrors the backend: development is open; production requires
 `homelab login --env production` (or `HOMELAB_API_KEY`).
+
+## Secret Manager
+
+The authenticated frontend exposes a secret manager at `/secrets` with the
+hierarchy `Product → Project → Environment → Secret`. New secret projects get
+`development`, `staging`, and `production` environments automatically.
+
+Secret values are encrypted at rest with `SECRETS_ENCRYPTION_KEY`. Existing
+deployments without that variable use a stable compatibility key derived from
+`API_KEY`; configure the dedicated variable before rotating `API_KEY` so stored
+secrets remain decryptable.
+
+The environment screen supports revealing individual values, copying the full
+environment, and downloading the complete environment as `.env`. Bulk export
+always includes every secret in the selected environment, regardless of UI
+filters.
 
 ## Deployment
 
